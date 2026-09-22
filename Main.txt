@@ -1,6 +1,8 @@
+
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
 local UserInputService   = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
 local TweenService       = game:GetService("TweenService")
 local Lighting            = game:GetService("Lighting")
 local Workspace           = game:GetService("Workspace")
@@ -174,61 +176,6 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 10000
 ScreenGui.Parent = PlayerGui
 
-local LoadingGui = Instance.new("ScreenGui")
-LoadingGui.Name = "CheatMenuLoading"
-LoadingGui.ResetOnSpawn = false
-LoadingGui.IgnoreGuiInset = true
-LoadingGui.DisplayOrder = 1000
-LoadingGui.Parent = PlayerGui
-
-local LoadingFrame = Instance.new("Frame")
-LoadingFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-LoadingFrame.Position = UDim2.fromScale(0.5, 0.5)
-LoadingFrame.Size = UDim2.fromOffset(300, 118)
-LoadingFrame.BackgroundColor3 = CONFIG.Colors.Panel
-LoadingFrame.BackgroundTransparency = 0.04
-LoadingFrame.BorderSizePixel = 0
-LoadingFrame.Parent = LoadingGui
-NewCorner(12, LoadingFrame)
-NewStroke(LoadingFrame, CONFIG.Colors.Stroke, 1, 0.12)
-
-local LoadingTitle = Instance.new("TextLabel")
-LoadingTitle.BackgroundTransparency = 1
-LoadingTitle.Position = UDim2.fromOffset(16, 14)
-LoadingTitle.Size = UDim2.new(1, -32, 0, 24)
-LoadingTitle.Font = Enum.Font.GothamBold
-LoadingTitle.TextSize = 16
-LoadingTitle.TextColor3 = CONFIG.Colors.Text
-LoadingTitle.TextXAlignment = Enum.TextXAlignment.Center
-LoadingTitle.Text = "BravoHack"
-LoadingTitle.Parent = LoadingFrame
-
-local LoadingText = Instance.new("TextLabel")
-LoadingText.BackgroundTransparency = 1
-LoadingText.Position = UDim2.fromOffset(16, 42)
-LoadingText.Size = UDim2.new(1, -32, 0, 20)
-LoadingText.Font = Enum.Font.Gotham
-LoadingText.TextSize = 11
-LoadingText.TextColor3 = CONFIG.Colors.SubText
-LoadingText.TextXAlignment = Enum.TextXAlignment.Center
-LoadingText.Text = "Loading interface..."
-LoadingText.Parent = LoadingFrame
-
-local LoadingTrack = Instance.new("Frame")
-LoadingTrack.Position = UDim2.fromOffset(26, 78)
-LoadingTrack.Size = UDim2.new(1, -52, 0, 6)
-LoadingTrack.BackgroundColor3 = CONFIG.Colors.SwitchOff
-LoadingTrack.BorderSizePixel = 0
-LoadingTrack.Parent = LoadingFrame
-NewCorner(3, LoadingTrack)
-
-local LoadingFill = Instance.new("Frame")
-LoadingFill.Size = UDim2.new(0, 0, 1, 0)
-LoadingFill.BackgroundColor3 = CONFIG.Colors.Accent
-LoadingFill.BorderSizePixel = 0
-LoadingFill.Parent = LoadingTrack
-NewCorner(3, LoadingFill)
-
 local Overlay = Instance.new("ScreenGui")
 Overlay.Name = "CheatMenuOverlay"
 Overlay.ResetOnSpawn = false
@@ -240,13 +187,14 @@ local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-MainFrame.Size = UDim2.fromOffset(0, 0)
+MainFrame.Size = CONFIG.Sizes.Window
 MainFrame.BackgroundColor3 = CONFIG.Colors.Background
 MainFrame.BackgroundTransparency = 0.05
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
-MainFrame.Visible = false
+MainFrame.Visible = true
 MainFrame.Parent = ScreenGui
+State.MenuOpen = false
 NewCorner(5, MainFrame)
 NewStroke(MainFrame, CONFIG.Colors.Stroke, 1, 0.2)
 
@@ -1190,7 +1138,7 @@ function RemoveVisualsOnly(plr)
     State.ESPObjects[plr] = nil
 end
 
-local function GetChamsTeamColor(plr)
+function State.GetChamsTeamColor(plr)
     if not State.Features.ChamsTeamColor or not State.Features.Chams then return nil end
     if plr and plr.Team then
         return plr.Team.TeamColor.Color
@@ -1198,9 +1146,9 @@ local function GetChamsTeamColor(plr)
     return nil
 end
 
-local function GetHighlightColors(plr)
+function State.GetHighlightColors(plr)
     local protected = IsProtectedPlayer(plr)
-    local teamColor = GetChamsTeamColor(plr)
+    local teamColor = State.GetChamsTeamColor(plr)
     if teamColor then
         return teamColor, teamColor
     end
@@ -1210,7 +1158,7 @@ end
 ApplyESPColors = function()
     for plr, objs in pairs(State.ESPObjects) do
         local protected = IsProtectedPlayer(plr)
-        local highlightFill, highlightOutline = GetHighlightColors(plr)
+        local highlightFill, highlightOutline = State.GetHighlightColors(plr)
         if objs.Highlight then
             objs.Highlight.FillColor = highlightFill
             objs.Highlight.OutlineColor = highlightOutline
@@ -1409,7 +1357,7 @@ function AddESPForPlayer(plr)
                     highlight.Adornee = char
                     highlight.FillTransparency = 0.55
                     highlight.OutlineTransparency = 0
-                    local highlightFill, highlightOutline = GetHighlightColors(plr)
+                    local highlightFill, highlightOutline = State.GetHighlightColors(plr)
                     highlight.FillColor = highlightFill
                     highlight.OutlineColor = highlightOutline
                     highlight.DepthMode = State.Features.Chams and Enum.HighlightDepthMode.AlwaysOnTop or Enum.HighlightDepthMode.Occluded
@@ -1541,7 +1489,7 @@ function AddESPForPlayer(plr)
             highlight.Adornee = char
             highlight.FillTransparency = 0.55
             highlight.OutlineTransparency = 0
-            local highlightFill, highlightOutline = GetHighlightColors(plr)
+            local highlightFill, highlightOutline = State.GetHighlightColors(plr)
             highlight.FillColor = highlightFill
             highlight.OutlineColor = highlightOutline
             highlight.DepthMode = State.Features.Chams and Enum.HighlightDepthMode.AlwaysOnTop or Enum.HighlightDepthMode.Occluded
@@ -1719,10 +1667,10 @@ function DisableInfiniteJump()
     end
 end
 
-local BunnyHopConn
+-- BunnyHop connection is stored on State to keep the top-level local register count low
 function EnableBunnyHop()
-    if BunnyHopConn then return end
-    BunnyHopConn = RunService.Heartbeat:Connect(function()
+    if State.BunnyHopConn then return end
+    State.BunnyHopConn = RunService.Heartbeat:Connect(function()
         if not State.Features.BunnyHop then return end
         local hum = GetHumanoid()
         if not hum then return end
@@ -1742,9 +1690,9 @@ function EnableBunnyHop()
 end
 
 function DisableBunnyHop()
-    if BunnyHopConn then
-        BunnyHopConn:Disconnect()
-        BunnyHopConn = nil
+    if State.BunnyHopConn then
+        State.BunnyHopConn:Disconnect()
+        State.BunnyHopConn = nil
     end
 end
 
@@ -2341,11 +2289,6 @@ end
 
 local MiscUI = {}
 
-local TeleportToSelectedPlayer
-local StartSpectatingSelectedPlayer
-local StopSpectatingSelectedPlayer
-local UpdateInventoryView
-
 local function GetPlayerTools(plr)
     local names, seen = {}, {}
     if not plr then return names end
@@ -2477,8 +2420,8 @@ RefreshPlayerListUI = function()
                 end
                 RefreshSelectedProtectionUI()
                 RefreshPlayerListUI()
-                if UpdateInventoryView then
-                    UpdateInventoryView()
+                if State.UpdateInventoryView then
+                    State.UpdateInventoryView()
                 end
             end)
 
@@ -2513,11 +2456,11 @@ RefreshPlayerListUI = function()
 
                 action("Teleport", 6, 6, 104, function()
                     State.SelectedPlayer = plr
-                    TeleportToSelectedPlayer()
+                    State.TeleportToSelectedPlayer()
                 end)
                 action("Spectate", 116, 6, 104, function()
                     State.SelectedPlayer = plr
-                    StartSpectatingSelectedPlayer()
+                    State.StartSpectatingSelectedPlayer()
                 end)
                 action(protected and "Remove Friendly" or "Add Friendly", 6, 38, 104, function()
                     State.SelectedPlayer = plr
@@ -2527,14 +2470,14 @@ RefreshPlayerListUI = function()
                 end)
                 action("Stop Spectate", 116, 38, 104, function()
                     State.SelectedPlayer = plr
-                    StopSpectatingSelectedPlayer()
+                    State.StopSpectatingSelectedPlayer()
                 end)
             end
         end
     end
 end
 
-TeleportToSelectedPlayer = function()
+State.TeleportToSelectedPlayer = function()
     local target = State.SelectedPlayer
     if not target or target == LocalPlayer or not target.Parent then
         if Notify then Notify("Teleport", "Selecteer eerst een geldige speler.", true) end
@@ -2599,7 +2542,7 @@ local function ApplySpectateTarget(plr)
     return true
 end
 
-StopSpectatingSelectedPlayer = function()
+State.StopSpectatingSelectedPlayer = function()
     State.Features.Spectate = false
 
     if SpectateCharacterConn then
@@ -2623,7 +2566,7 @@ StopSpectatingSelectedPlayer = function()
     SpectateSavedCameraSubject = nil
 end
 
-StartSpectatingSelectedPlayer = function()
+State.StartSpectatingSelectedPlayer = function()
     local target = State.SelectedPlayer
     if not target or target == LocalPlayer or not target.Parent then
         State.Features.Spectate = false
@@ -2673,7 +2616,7 @@ StartSpectatingSelectedPlayer = function()
             Camera.CameraType = Enum.CameraType.Custom
             Camera.CameraSubject = hum
         else
-            StopSpectatingSelectedPlayer()
+            State.StopSpectatingSelectedPlayer()
             if Notify then Notify("Spectate", "Deze speler heeft momenteel geen Humanoid.", true) end
             return false
         end
@@ -2725,7 +2668,7 @@ local function RebuildChatLog()
     end
 end
 
-UpdateInventoryView = function()
+State.UpdateInventoryView = function()
     if not MiscUI.InventoryLabel then return end
     if not State.Features.InventoryView then
         return
@@ -2942,7 +2885,7 @@ do
     CreateInfoLabel(page, "Silent Aim gebruikt een eigen FOV en hit chance; de target blijft via GetSilentAimTarget() beschikbaar voor je weapon-code.", 12)
 end
 
-local function FindDexExplorerGuis()
+function State.FindDexExplorerGuis()
     local found = {}
     local seen = {}
 
@@ -2964,8 +2907,8 @@ local function FindDexExplorerGuis()
     return found
 end
 
-local function SetDexExplorerEnabled(enabled)
-    local guis = FindDexExplorerGuis()
+function State.SetDexExplorerEnabled(enabled)
+    local guis = State.FindDexExplorerGuis()
     for _, gui in ipairs(guis) do
         gui.Enabled = enabled
     end
@@ -3080,7 +3023,7 @@ do
     CreateToggle(page, "Inventory View venster", false, 4, function(v)
         State.Features.InventoryView = v
         if SetMiscWindowVisible and InventoryWindow then SetMiscWindowVisible(InventoryWindow, v) end
-        UpdateInventoryView()
+        State.UpdateInventoryView()
     end, "InventoryView")
     CreateToggle(page, "Tool Viewer (door muren)", false, 5, function(v)
         State.Features.ToolViewer = v
@@ -3088,7 +3031,7 @@ do
     end, "ToolViewer")
     CreateToggle(page, "Dex Explorer", false, 6, function(v)
         State.Features.DexExplorer = v
-        SetDexExplorerEnabled(v)
+        State.SetDexExplorerEnabled(v)
     end, "DexExplorer")
     CreateInfoLabel(page, "Dex Explorer toggle beheert een bestaande Dex/Dex Explorer ScreenGui in PlayerGui.", 7)
 end
@@ -3320,8 +3263,8 @@ protectedAdd.Visible=false
 protectedRemove.Visible=false
 protectedAdd.Active=false
 protectedRemove.Active=false
-RefreshSelectedProtectionUI()
-RefreshPlayerListUI()
+pcall(RefreshSelectedProtectionUI)
+pcall(RefreshPlayerListUI)
 
 MiscUI.InventoryGui = InventoryGui
 MiscUI.InventoryPanel = InventoryWindow
@@ -3356,14 +3299,14 @@ Players.PlayerAdded:Connect(function(plr)
 end)
 Players.PlayerRemoving:Connect(function(plr)
     if SpectateTarget == plr then
-        StopSpectatingSelectedPlayer()
+        State.StopSpectatingSelectedPlayer()
     end
     if State.SelectedPlayer == plr then
         State.SelectedPlayer = nil
         State.PlayerActionExpanded = nil
         if MiscUI.SelectedLabel then MiscUI.SelectedLabel.Text = "Geselecteerd: niemand" end
         RefreshSelectedProtectionUI()
-        if UpdateInventoryView then UpdateInventoryView() end
+        if State.UpdateInventoryView then State.UpdateInventoryView() end
     end
     State.ProtectedPlayers[plr.UserId] = nil
     if MiscUI.PlayerListFrame then RefreshPlayerListUI() end
@@ -3379,7 +3322,7 @@ pcall(function()
     end)
 end)
 
-RefreshToolViewer()
+pcall(RefreshToolViewer)
 
 local SavedConfigs = {}
 local Unloaded = false
@@ -3433,7 +3376,6 @@ local function UnloadMenu()
             end
         end
     end)
-    pcall(function() if LoadingGui then LoadingGui:Destroy() end end)
     pcall(function() if ScreenGui then ScreenGui:Destroy() end end)
     pcall(function() if Overlay then Overlay:Destroy() end end)
     pcall(function() if PlayerListGui then PlayerListGui:Destroy() end end)
@@ -3443,7 +3385,7 @@ local function UnloadMenu()
     pcall(function() if NotificationGui then NotificationGui:Destroy() end end)
     pcall(function() if FreecamStatusLabel then FreecamStatusLabel:Destroy() end end)
     pcall(function() for plr in pairs(ToolViewerObjects) do RemoveToolViewerForPlayer(plr) end end)
-    pcall(function() StopSpectatingSelectedPlayer() end)
+    pcall(function() State.StopSpectatingSelectedPlayer() end)
     pcall(function() DisableFreecam() end)
     pcall(function() DisableForceField() end)
 end
@@ -3453,6 +3395,13 @@ do
     CreateSectionLabel(page, "Algemeen", 1)
     CreateKeybind(page, "Menu Toggle Key", CONFIG.Keybinds.ToggleMenu, 2, function(newKey)
         CONFIG.Keybinds.ToggleMenu = newKey
+        pcall(function() ContextActionService:UnbindAction("BravoHack_MenuToggle") end)
+        ContextActionService:BindActionAtPriority("BravoHack_MenuToggle", function(_, inputState)
+            if inputState == Enum.UserInputState.Begin then
+                ToggleMenu()
+            end
+            return Enum.ContextActionResult.Sink
+        end, false, Enum.ContextActionPriority.High.Value, CONFIG.Keybinds.ToggleMenu)
     end)
     CreateSlider(page, "UI Schaal", 0.7, 1.3, State.Sliders.UIScale, 3, function(v)
         State.Sliders.UIScale = v
@@ -3538,18 +3487,20 @@ CloseButton.MouseEnter:Connect(function() Tween(CloseButton, TI_FAST, { Backgrou
 CloseButton.MouseLeave:Connect(function() Tween(CloseButton, TI_FAST, { BackgroundColor3 = Color3.fromRGB(40, 40, 48) }) end)
 CloseButton.MouseButton1Click:Connect(CloseMenu)
 
-task.defer(function()
-    if Unloaded then return end
+local function BindMenuToggle()
     pcall(function()
-        if LoadingGui then LoadingGui:Destroy() end
+        ContextActionService:UnbindAction("BravoHack_MenuToggle")
     end)
-    OpenMenu()
-end)
-task.delay(1, function()
-    if not Unloaded and (not State.MenuOpen or not MainFrame.Visible) then
-        OpenMenu()
-    end
-end)
+    ContextActionService:BindActionAtPriority("BravoHack_MenuToggle", function(_, inputState)
+        if inputState == Enum.UserInputState.Begin then
+            ToggleMenu()
+        end
+        return Enum.ContextActionResult.Sink
+    end, false, Enum.ContextActionPriority.High.Value, CONFIG.Keybinds.ToggleMenu)
+end
+
+BindMenuToggle()
+OpenMenu()
 
 task.defer(function()
     State.CurrentTab = categories[1]
@@ -3564,7 +3515,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
     if KeybindListening then return end
 
     if input.KeyCode == CONFIG.Keybinds.ToggleMenu then
-        ToggleMenu()
         return
     end
 
@@ -3730,7 +3680,7 @@ RunService.Heartbeat:Connect(function(dt)
     end
 
     if State.Features.InventoryView then
-        UpdateInventoryView()
+        State.UpdateInventoryView()
     end
 
     if ShouldTrack() then
@@ -3772,7 +3722,7 @@ RunService.Heartbeat:Connect(function(dt)
                     end
                 end
 
-                local highlightFill, highlightOutline = GetHighlightColors(plr)
+                local highlightFill, highlightOutline = State.GetHighlightColors(plr)
                 if objs.Highlight then
                     objs.Highlight.FillColor = highlightFill
                     objs.Highlight.OutlineColor = highlightOutline
