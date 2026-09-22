@@ -192,7 +192,7 @@ KeyGate.Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 KeyGate.Frame = Instance.new("Frame")
 KeyGate.Frame.AnchorPoint = Vector2.new(0.5, 0.5)
 KeyGate.Frame.Position = UDim2.fromScale(0.5, 0.5)
-KeyGate.Frame.Size = UDim2.fromOffset(380, 230)
+KeyGate.Frame.Size = UDim2.fromOffset(380, 310)
 KeyGate.Frame.BackgroundColor3 = CONFIG.Colors.Background
 KeyGate.Frame.BackgroundTransparency = 0.02
 KeyGate.Frame.BorderSizePixel = 0
@@ -261,10 +261,44 @@ KeyGate.Button.ZIndex = 102
 KeyGate.Button.Parent = KeyGate.Frame
 NewCorner(6, KeyGate.Button)
 
+KeyGate.GetKeyButton = Instance.new("TextButton")
+KeyGate.GetKeyButton.Size = UDim2.new(0.5, -25, 0, 34)
+KeyGate.GetKeyButton.Position = UDim2.fromOffset(20, 198)
+KeyGate.GetKeyButton.BackgroundColor3 = CONFIG.Colors.Panel
+KeyGate.GetKeyButton.BorderSizePixel = 0
+KeyGate.GetKeyButton.AutoButtonColor = false
+KeyGate.GetKeyButton.Font = Enum.Font.GothamBold
+KeyGate.GetKeyButton.TextSize = 12
+KeyGate.GetKeyButton.TextColor3 = CONFIG.Colors.Text
+KeyGate.GetKeyButton.Text = "Get Key"
+KeyGate.GetKeyButton.Active = true
+KeyGate.GetKeyButton.Selectable = true
+KeyGate.GetKeyButton.ZIndex = 102
+KeyGate.GetKeyButton.Parent = KeyGate.Frame
+NewCorner(6, KeyGate.GetKeyButton)
+NewStroke(KeyGate.GetKeyButton, CONFIG.Colors.Stroke, 1, 0.2)
+
+KeyGate.UninjectButton = Instance.new("TextButton")
+KeyGate.UninjectButton.Size = UDim2.new(0.5, -25, 0, 34)
+KeyGate.UninjectButton.Position = UDim2.new(0.5, 5, 0, 198)
+KeyGate.UninjectButton.BackgroundColor3 = Color3.fromRGB(55, 35, 38)
+KeyGate.UninjectButton.BorderSizePixel = 0
+KeyGate.UninjectButton.AutoButtonColor = false
+KeyGate.UninjectButton.Font = Enum.Font.GothamBold
+KeyGate.UninjectButton.TextSize = 12
+KeyGate.UninjectButton.TextColor3 = CONFIG.Colors.Text
+KeyGate.UninjectButton.Text = "Uninject"
+KeyGate.UninjectButton.Active = true
+KeyGate.UninjectButton.Selectable = true
+KeyGate.UninjectButton.ZIndex = 102
+KeyGate.UninjectButton.Parent = KeyGate.Frame
+NewCorner(6, KeyGate.UninjectButton)
+NewStroke(KeyGate.UninjectButton, CONFIG.Colors.Stroke, 1, 0.2)
+
 KeyGate.Status = Instance.new("TextLabel")
 KeyGate.Status.BackgroundTransparency = 1
-KeyGate.Status.Position = UDim2.fromOffset(20, 196)
-KeyGate.Status.Size = UDim2.new(1, -40, 0, 20)
+KeyGate.Status.Position = UDim2.fromOffset(20, 244)
+KeyGate.Status.Size = UDim2.new(1, -40, 0, 36)
 KeyGate.Status.Font = Enum.Font.Gotham
 KeyGate.Status.TextSize = 11
 KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
@@ -302,6 +336,17 @@ UserInputService.InputBegan:Connect(function(input)
     if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
         TrySubmitKey()
     end
+end)
+
+KeyGate.GetKeyButton.MouseButton1Click:Connect(function()
+    pcall(function()
+        game:GetService("GuiService"):OpenBrowserWindow("https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt")
+    end)
+end)
+KeyGate.GetKeyButton.Activated:Connect(function()
+    pcall(function()
+        game:GetService("GuiService"):OpenBrowserWindow("https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt")
+    end)
 end)
 
 MainFrame = Instance.new("Frame")
@@ -3500,6 +3545,9 @@ local function UnloadMenu()
     pcall(function() DisableFreecam() end)
     pcall(function() DisableForceField() end)
 end
+
+KeyGate.UninjectButton.MouseButton1Click:Connect(UnloadMenu)
+KeyGate.UninjectButton.Activated:Connect(UnloadMenu)
 
 do
     local page = Pages.Settings
