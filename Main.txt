@@ -4114,3 +4114,181 @@ if LocalPlayer.Character then
 end
 
 print("[BravoHack] Loaded. Press "..CONFIG.Keybinds.ToggleMenu.Name.." om het menu te openen.")
+
+pcall(function()
+    if KeyGate and KeyGate.Gui then
+        KeyGate.Gui:Destroy()
+    end
+end)
+
+local FinalKeyGui = Instance.new("ScreenGui")
+FinalKeyGui.Name = "BravoHackKeySystemFinal"
+FinalKeyGui.ResetOnSpawn = false
+FinalKeyGui.IgnoreGuiInset = true
+FinalKeyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+FinalKeyGui.DisplayOrder = 2147483647
+FinalKeyGui.Parent = PlayerGui
+
+local FinalKeyFrame = Instance.new("Frame")
+FinalKeyFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+FinalKeyFrame.Position = UDim2.fromScale(0.5, 0.5)
+FinalKeyFrame.Size = UDim2.fromOffset(420, 285)
+FinalKeyFrame.BackgroundColor3 = CONFIG.Colors.Background
+FinalKeyFrame.BorderSizePixel = 0
+FinalKeyFrame.Active = true
+FinalKeyFrame.ZIndex = 1000
+FinalKeyFrame.Parent = FinalKeyGui
+NewCorner(8, FinalKeyFrame)
+NewStroke(FinalKeyFrame, CONFIG.Colors.Stroke, 1, 0.1)
+
+local FinalTitle = Instance.new("TextLabel")
+FinalTitle.BackgroundTransparency = 1
+FinalTitle.Position = UDim2.fromOffset(20, 16)
+FinalTitle.Size = UDim2.new(1, -40, 0, 30)
+FinalTitle.Font = Enum.Font.GothamBold
+FinalTitle.TextSize = 22
+FinalTitle.TextColor3 = CONFIG.Colors.Text
+FinalTitle.Text = "BravoHack"
+FinalTitle.ZIndex = 1001
+FinalTitle.Parent = FinalKeyFrame
+
+local FinalSubtitle = Instance.new("TextLabel")
+FinalSubtitle.BackgroundTransparency = 1
+FinalSubtitle.Position = UDim2.fromOffset(20, 48)
+FinalSubtitle.Size = UDim2.new(1, -40, 0, 34)
+FinalSubtitle.Font = Enum.Font.Gotham
+FinalSubtitle.TextSize = 12
+FinalSubtitle.TextColor3 = CONFIG.Colors.SubText
+FinalSubtitle.Text = "Enter your access key to continue."
+FinalSubtitle.ZIndex = 1001
+FinalSubtitle.Parent = FinalKeyFrame
+
+local FinalInput = Instance.new("TextBox")
+FinalInput.Size = UDim2.new(1, -40, 0, 42)
+FinalInput.Position = UDim2.fromOffset(20, 88)
+FinalInput.BackgroundColor3 = CONFIG.Colors.Panel
+FinalInput.BorderSizePixel = 0
+FinalInput.ClearTextOnFocus = false
+FinalInput.PlaceholderText = "Access key"
+FinalInput.Text = ""
+FinalInput.Font = Enum.Font.Gotham
+FinalInput.TextSize = 13
+FinalInput.TextColor3 = CONFIG.Colors.Text
+FinalInput.PlaceholderColor3 = CONFIG.Colors.SubText
+FinalInput.TextXAlignment = Enum.TextXAlignment.Left
+FinalInput.Active = true
+FinalInput.TextEditable = true
+FinalInput.ZIndex = 1002
+FinalInput.Parent = FinalKeyFrame
+NewCorner(6, FinalInput)
+NewStroke(FinalInput, CONFIG.Colors.Stroke, 1, 0.2)
+
+local FinalUnlock = Instance.new("TextButton")
+FinalUnlock.Size = UDim2.new(1, -40, 0, 40)
+FinalUnlock.Position = UDim2.fromOffset(20, 140)
+FinalUnlock.BackgroundColor3 = CONFIG.Colors.Accent
+FinalUnlock.BorderSizePixel = 0
+FinalUnlock.AutoButtonColor = false
+FinalUnlock.Active = true
+FinalUnlock.Selectable = true
+FinalUnlock.Font = Enum.Font.GothamBold
+FinalUnlock.TextSize = 13
+FinalUnlock.TextColor3 = Color3.fromRGB(255, 255, 255)
+FinalUnlock.Text = "Unlock"
+FinalUnlock.ZIndex = 1002
+FinalUnlock.Parent = FinalKeyFrame
+NewCorner(6, FinalUnlock)
+
+local FinalGetKey = Instance.new("TextButton")
+FinalGetKey.Size = UDim2.new(0.5, -25, 0, 36)
+FinalGetKey.Position = UDim2.fromOffset(20, 190)
+FinalGetKey.BackgroundColor3 = CONFIG.Colors.Panel
+FinalGetKey.BorderSizePixel = 0
+FinalGetKey.AutoButtonColor = false
+FinalGetKey.Active = true
+FinalGetKey.Selectable = true
+FinalGetKey.Font = Enum.Font.GothamBold
+FinalGetKey.TextSize = 12
+FinalGetKey.TextColor3 = CONFIG.Colors.Text
+FinalGetKey.Text = "Get Key"
+FinalGetKey.ZIndex = 1002
+FinalGetKey.Parent = FinalKeyFrame
+NewCorner(6, FinalGetKey)
+NewStroke(FinalGetKey, CONFIG.Colors.Stroke, 1, 0.2)
+
+local FinalUninject = Instance.new("TextButton")
+FinalUninject.Size = UDim2.new(0.5, -25, 0, 36)
+FinalUninject.Position = UDim2.new(0.5, 5, 0, 190)
+FinalUninject.BackgroundColor3 = Color3.fromRGB(55, 35, 38)
+FinalUninject.BorderSizePixel = 0
+FinalUninject.AutoButtonColor = false
+FinalUninject.Active = true
+FinalUninject.Selectable = true
+FinalUninject.Font = Enum.Font.GothamBold
+FinalUninject.TextSize = 12
+FinalUninject.TextColor3 = CONFIG.Colors.Text
+FinalUninject.Text = "Uninject"
+FinalUninject.ZIndex = 1002
+FinalUninject.Parent = FinalKeyFrame
+NewCorner(6, FinalUninject)
+NewStroke(FinalUninject, CONFIG.Colors.Stroke, 1, 0.2)
+
+local FinalStatus = Instance.new("TextLabel")
+FinalStatus.BackgroundTransparency = 1
+FinalStatus.Position = UDim2.fromOffset(20, 236)
+FinalStatus.Size = UDim2.new(1, -40, 0, 28)
+FinalStatus.Font = Enum.Font.Gotham
+FinalStatus.TextSize = 11
+FinalStatus.TextColor3 = CONFIG.Colors.SubText
+FinalStatus.Text = "Enter your key and press Unlock."
+FinalStatus.ZIndex = 1001
+FinalStatus.Parent = FinalKeyFrame
+
+local function FinalUnlockMenu()
+    local key = tostring(FinalInput.Text or ""):gsub("%s+", ""):upper()
+    if key == "BRAVOONTOP" then
+        State.KeyAuthorized = true
+        _G.__BravoHackKeyAuthorized = true
+        FinalStatus.Text = "Access granted."
+        FinalStatus.TextColor3 = CONFIG.Colors.Green
+        FinalKeyGui.Enabled = false
+        if DirectOpenMenu then
+            DirectOpenMenu()
+        else
+            MainFrame.Visible = true
+            State.MenuOpen = true
+        end
+    else
+        FinalStatus.Text = "Invalid key."
+        FinalStatus.TextColor3 = CONFIG.Colors.Red
+    end
+end
+
+FinalUnlock.Activated:Connect(FinalUnlockMenu)
+FinalInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        FinalUnlockMenu()
+    end
+end)
+
+FinalGetKey.Activated:Connect(function()
+    local ok = pcall(function()
+        game:GetService("GuiService"):OpenBrowserWindow("https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt")
+    end)
+    if not ok then
+        FinalStatus.Text = "Key: BRAVOONTOP"
+        FinalStatus.TextColor3 = CONFIG.Colors.SubText
+    end
+end)
+
+FinalUninject.Activated:Connect(function()
+    pcall(function()
+        UnloadMenu()
+    end)
+    pcall(function() ContextActionService:UnbindAction("BravoHack_MenuToggle") end)
+    pcall(function() FinalKeyGui:Destroy() end)
+end)
+
+task.defer(function()
+    pcall(function() FinalInput:CaptureFocus() end)
+end)
