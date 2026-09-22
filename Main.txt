@@ -187,6 +187,7 @@ KeyGate.Gui.IgnoreGuiInset = true
 KeyGate.Gui.DisplayOrder = 20000
 KeyGate.Gui.Parent = PlayerGui
 KeyGate.Gui.Enabled = true
+KeyGate.Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 KeyGate.Frame = Instance.new("Frame")
 KeyGate.Frame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -195,6 +196,8 @@ KeyGate.Frame.Size = UDim2.fromOffset(380, 230)
 KeyGate.Frame.BackgroundColor3 = CONFIG.Colors.Background
 KeyGate.Frame.BackgroundTransparency = 0.02
 KeyGate.Frame.BorderSizePixel = 0
+KeyGate.Frame.Active = true
+KeyGate.Frame.ZIndex = 100
 KeyGate.Frame.Parent = KeyGate.Gui
 NewCorner(8, KeyGate.Frame)
 NewStroke(KeyGate.Frame, CONFIG.Colors.Stroke, 1, 0.1)
@@ -207,6 +210,7 @@ KeyGate.Title.Font = Enum.Font.GothamBold
 KeyGate.Title.TextSize = 22
 KeyGate.Title.TextColor3 = CONFIG.Colors.Text
 KeyGate.Title.Text = "BravoHack"
+KeyGate.Title.ZIndex = 101
 KeyGate.Title.Parent = KeyGate.Frame
 
 KeyGate.Subtitle = Instance.new("TextLabel")
@@ -218,6 +222,7 @@ KeyGate.Subtitle.TextSize = 12
 KeyGate.Subtitle.TextColor3 = CONFIG.Colors.SubText
 KeyGate.Subtitle.TextWrapped = true
 KeyGate.Subtitle.Text = "Enter your access key to unlock the menu. Access is remembered for this session."
+KeyGate.Subtitle.ZIndex = 101
 KeyGate.Subtitle.Parent = KeyGate.Frame
 
 KeyGate.Input = Instance.new("TextBox")
@@ -233,6 +238,9 @@ KeyGate.Input.TextSize = 13
 KeyGate.Input.TextColor3 = CONFIG.Colors.Text
 KeyGate.Input.PlaceholderColor3 = CONFIG.Colors.SubText
 KeyGate.Input.TextXAlignment = Enum.TextXAlignment.Left
+KeyGate.Input.Active = true
+KeyGate.Input.TextEditable = true
+KeyGate.Input.ZIndex = 102
 KeyGate.Input.Parent = KeyGate.Frame
 NewCorner(6, KeyGate.Input)
 NewStroke(KeyGate.Input, CONFIG.Colors.Stroke, 1, 0.25)
@@ -247,6 +255,9 @@ KeyGate.Button.Font = Enum.Font.GothamBold
 KeyGate.Button.TextSize = 13
 KeyGate.Button.TextColor3 = Color3.fromRGB(255,255,255)
 KeyGate.Button.Text = "Unlock"
+KeyGate.Button.Active = true
+KeyGate.Button.Selectable = true
+KeyGate.Button.ZIndex = 102
 KeyGate.Button.Parent = KeyGate.Frame
 NewCorner(6, KeyGate.Button)
 
@@ -258,9 +269,42 @@ KeyGate.Status.Font = Enum.Font.Gotham
 KeyGate.Status.TextSize = 11
 KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
 KeyGate.Status.Text = "Enter your access key."
+KeyGate.Status.ZIndex = 101
 KeyGate.Status.Parent = KeyGate.Frame
 
-local MainFrame = Instance.new("Frame")
+local MainFrame, StatusLabel
+local SubmitKey, DirectOpenMenu
+local KeyGateBusy = false
+
+local function TrySubmitKey()
+    if SubmitKey then
+        SubmitKey()
+    else
+        KeyGate.Status.Text = "Please wait..."
+        KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
+    end
+end
+
+KeyGate.Button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        TrySubmitKey()
+    end
+end)
+KeyGate.Button.MouseButton1Click:Connect(TrySubmitKey)
+KeyGate.Button.Activated:Connect(TrySubmitKey)
+KeyGate.Input.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        TrySubmitKey()
+    end
+end)
+UserInputService.InputBegan:Connect(function(input)
+    if UserInputService:GetFocusedTextBox() ~= KeyGate.Input then return end
+    if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
+        TrySubmitKey()
+    end
+end)
+
+MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -436,7 +480,7 @@ ProfileName.TextTruncate = Enum.TextTruncate.AtEnd
 ProfileName.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name
 ProfileName.Parent = StatusBar
 
-local StatusLabel = ProfileName
+StatusLabel = ProfileName
 
 task.spawn(function()
     local ok, image = pcall(function()
@@ -3502,7 +3546,6 @@ do
     CreateInfoLabel(page, "Feature keybinds start empty. Click the small key button on a feature to choose one.", 15)
 end
 
-local KeyGateBusy = false
 local OpenMenu
 
 KeyGate.SourceURL = "https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt"
@@ -3511,40 +3554,57 @@ KeyGate.ValidKeys = {
 }
 
 local function SetKeyGateVisible(visible)
-    if KeyGate.Gui then
+    if KeyGate.Gui and KeyGate.Gui.Parent then
         KeyGate.Gui.Enabled = visible
+        if visible then
+            KeyGate.Gui.DisplayOrder = 20000
+        end
     end
+end
+
+DirectOpenMenu = function()
+    if Unloaded then return end
+    State.KeyAuthorized = true
+    State.MenuOpen = true
+    if ScreenGui and ScreenGui.Parent ~= PlayerGui then
+        ScreenGui.Parent = PlayerGui
+    end
+    ScreenGui.Enabled = true
+    ScreenGui.DisplayOrder = 10000
+    MainFrame.Visible = true
+    MainFrame.Size = CONFIG.Sizes.Window
+    if StatusLabel then
+        StatusLabel.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name
+    end
+    SetKeyGateVisible(false)
 end
 
 local function AuthorizeAndOpen()
     State.KeyAuthorized = true
     _G.__BravoHackKeyAuthorized = true
-    SetKeyGateVisible(false)
-    OpenMenu()
+    DirectOpenMenu()
 end
 
 local function StartKeyGate()
-    if _G.__BravoHackKeyAuthorized then
-        AuthorizeAndOpen()
-        return
-    end
-
     State.KeyAuthorized = false
+    State.MenuOpen = false
     MainFrame.Visible = false
     SetKeyGateVisible(true)
     KeyGate.Status.Text = "Enter your access key."
     KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
-
     task.defer(function()
-        pcall(function() KeyGate.Input:CaptureFocus() end)
+        pcall(function()
+            KeyGate.Input:CaptureFocus()
+        end)
     end)
 end
 
-local function SubmitKey()
-    if KeyGateBusy then return end
+SubmitKey = function()
+    if KeyGateBusy or State.KeyAuthorized then return end
 
     local key = tostring(KeyGate.Input.Text or "")
-key = key:gsub("%s+", ""):upper()
+    key = key:gsub("[%c%s]", ""):upper()
+
     if key == "" then
         KeyGate.Status.Text = "Enter a key first."
         KeyGate.Status.TextColor3 = CONFIG.Colors.Red
@@ -3556,48 +3616,22 @@ key = key:gsub("%s+", ""):upper()
     KeyGate.Status.Text = "Validating key..."
     KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
 
-    task.wait(0.15)
     local valid = KeyGate.ValidKeys[key] == true
-
-    KeyGateBusy = false
-    KeyGate.Button.Text = "Unlock"
 
     if valid then
         KeyGate.Status.Text = "Access granted."
         KeyGate.Status.TextColor3 = CONFIG.Colors.Green
-        task.wait(0.25)
-        AuthorizeAndOpen()
+        KeyGateBusy = false
+        KeyGate.Button.Text = "Unlocked"
+        task.defer(AuthorizeAndOpen)
     else
+        KeyGateBusy = false
+        KeyGate.Button.Text = "Unlock"
         KeyGate.Status.Text = "Invalid key."
         KeyGate.Status.TextColor3 = CONFIG.Colors.Red
     end
 end
 
-KeyGate.Button.Active = true
-KeyGate.Button.Selectable = true
-KeyGate.Button.ZIndex = 50
-KeyGate.Input.Active = true
-KeyGate.Input.Selectable = true
-KeyGate.Input.ZIndex = 50
-KeyGate.Status.ZIndex = 50
-KeyGate.Button.Activated:Connect(SubmitKey)
-KeyGate.Button.MouseEnter:Connect(function()
-    Tween(KeyGate.Button, TI_FAST, {BackgroundColor3 = CONFIG.Colors.AccentHover})
-end)
-KeyGate.Button.MouseLeave:Connect(function()
-    Tween(KeyGate.Button, TI_FAST, {BackgroundColor3 = CONFIG.Colors.Accent})
-end)
-KeyGate.Input.FocusLost:Connect(function(enterPressed)
-    if enterPressed then SubmitKey() end
-end)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
-        if UserInputService:GetFocusedTextBox() == KeyGate.Input then
-            SubmitKey()
-        end
-    end
-end)
 
 OpenMenu = function()
     if Unloaded or not State.KeyAuthorized then return end
@@ -3666,6 +3700,8 @@ end
 
 BindMenuToggle()
 StartKeyGate()
+SetKeyGateVisible(true)
+KeyGate.Frame.Visible = true
 
 task.defer(function()
     State.CurrentTab = categories[1]
