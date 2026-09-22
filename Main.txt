@@ -85,13 +85,10 @@ local State = {
         HideFreecamBar = false,
         TeamCheck = false,
         WallCheck = false,
-        SilentAim = false,
     },
     Sliders = {
         ESPDistance = 300,
         AimFOV = 100,
-        SilentAimFOV = 100,
-        SilentAimHitChance = 100,
         AimSmoothness = 0.25,
         WalkSpeed = 16,
         JumpPower = 50,
@@ -104,8 +101,6 @@ local State = {
     ESPObjects = {},
     SelectedPlayer = nil,
     AimTargetPart = nil,
-    SilentAimTarget = nil,
-    SilentAimTargetPart = nil,
     PlayerActionExpanded = nil,
     ProtectedPlayers = {},
     ChatMessages = {},
@@ -642,7 +637,7 @@ local function OpenColorPicker(colorName, titleText)
     title.TextSize = 14
     title.TextColor3 = CONFIG.Colors.Text
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Text = titleText or ("Kleur: " .. colorName)
+    title.Text = titleText or ("Color: " .. colorName)
     title.Parent = frame
 
     local close = Instance.new("TextButton")
@@ -771,7 +766,7 @@ local function OpenColorPicker(colorName, titleText)
     info.TextSize=10
     info.TextColor3=CONFIG.Colors.SubText
     info.TextWrapped=true
-    info.Text="Sleep de popup of klik X om te sluiten. De kleur wordt direct toegepast."
+    info.Text="Drag the popup or click X to close. The color applies immediately."
     info.Parent=frame
 end
 
@@ -830,7 +825,7 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
         colorBtn.Parent=row
         NewCorner(6,colorBtn)
         NewStroke(colorBtn, CONFIG.Colors.Stroke, 1, 0.1)
-        colorBtn.MouseButton1Click:Connect(function() OpenColorPicker(colorName, "Kleur — " .. text) end)
+        colorBtn.MouseButton1Click:Connect(function() OpenColorPicker(colorName, "Color — " .. text) end)
         FeatureColorRefs[colorName] = FeatureColorRefs[colorName] or {}
         table.insert(FeatureColorRefs[colorName], colorBtn)
     end
@@ -845,14 +840,14 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
         keyBtn.TextSize = 11
         keyBtn.TextColor3 = CONFIG.Colors.Text
         keyBtn.AutoButtonColor = false
-        keyBtn.Text = currentKey and currentKey.Name or "Niet ingesteld"
+        keyBtn.Text = currentKey and currentKey.Name or "Not set"
         keyBtn.ZIndex = 5
         keyBtn.Parent = row
         NewCorner(6, keyBtn)
         keyBtn.MouseButton1Click:Connect(function()
             if KeybindListening then return end
             KeybindListening = true
-            keyBtn.Text = "druk..."
+            keyBtn.Text = "press..."
             Tween(keyBtn, TI_FAST, { BackgroundColor3 = CONFIG.Colors.Accent })
             local oldKey = currentKey
             local conn
@@ -867,7 +862,7 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
                     currentKey = input.KeyCode
                     CONFIG.Keybinds[keyName] = currentKey
                 end
-                keyBtn.Text = currentKey and currentKey.Name or "Niet ingesteld"
+                keyBtn.Text = currentKey and currentKey.Name or "Not set"
                 KeybindListening = false
                 Tween(keyBtn, TI_FAST, { BackgroundColor3 = Color3.fromRGB(50, 50, 58) })
                 conn:Disconnect()
@@ -889,13 +884,13 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
         Tween(switchBG, TI_FAST, { BackgroundColor3 = state and CONFIG.Colors.Accent or Color3.fromRGB(16, 16, 18) })
         switchBG:FindFirstChildOfClass("UIStroke").Color = state and CONFIG.Colors.Accent or CONFIG.Colors.Stroke
         knob.Visible = state
-        local shouldNotify = State.Features.Notifications or text == "Notificaties"
+        local shouldNotify = State.Features.Notifications or text == "Notifications"
         if (not skipCallback) and callback then
             local ok, err = pcall(callback, state)
             if not ok then warn("[BravoHack] Toggle error ("..text.."):", err) end
         end
-        if shouldNotify and text ~= "Notificaties" then
-            Notify(text, state and "Ingeschakeld" or "Uitgeschakeld", true)
+        if shouldNotify and text ~= "Notifications" then
+            Notify(text, state and "Ingeschakeld" or "Offgeschakeld", true)
         end
     end
     hitButton.MouseButton1Click:Connect(function() setState(not state) end)
@@ -1108,7 +1103,7 @@ local function CreateActionButton(parent, text, order, callback, keyName)
         keyBtn.TextSize = 11
         keyBtn.TextColor3 = CONFIG.Colors.Text
         keyBtn.AutoButtonColor = false
-        keyBtn.Text = currentKey and currentKey.Name or "Niet ingesteld"
+        keyBtn.Text = currentKey and currentKey.Name or "Not set"
         keyBtn.ZIndex = 5
         keyBtn.Parent = row
         NewCorner(6, keyBtn)
@@ -1116,17 +1111,17 @@ local function CreateActionButton(parent, text, order, callback, keyName)
         keyBtn.MouseButton1Click:Connect(function()
             if KeybindListening then return end
             KeybindListening = true
-            keyBtn.Text = "druk..."
+            keyBtn.Text = "press..."
             Tween(keyBtn, TI_FAST, { BackgroundColor3 = CONFIG.Colors.AccentHover })
             local conn
             conn = UserInputService.InputBegan:Connect(function(input)
                 if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
                 if input.KeyCode == Enum.KeyCode.Escape then
-                    keyBtn.Text = currentKey and currentKey.Name or "Niet ingesteld"
+                    keyBtn.Text = currentKey and currentKey.Name or "Not set"
                 elseif input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Delete then
                     currentKey = nil
                     CONFIG.Keybinds[keyName] = nil
-                    keyBtn.Text = "Niet ingesteld"
+                    keyBtn.Text = "Not set"
                 else
                     currentKey = input.KeyCode
                     CONFIG.Keybinds[keyName] = currentKey
@@ -1148,7 +1143,7 @@ local function CreateActionButton(parent, text, order, callback, keyName)
             if not ok then warn("[BravoHack] Button error ("..text.."):", err) end
         end
         if State.Features.Notifications then
-            Notify(text, "Uitgevoerd", false)
+            Notify(text, "Offgevoerd", false)
         end
     end)
 
@@ -1159,7 +1154,7 @@ local function CreateActionButton(parent, text, order, callback, keyName)
                 if not ok then warn("[BravoHack] Keybind action error ("..text.."):", err) end
             end
             if State.Features.Notifications then
-                Notify(text, "Uitgevoerd", false)
+                Notify(text, "Offgevoerd", false)
             end
         end
     end
@@ -1323,7 +1318,7 @@ local function CreateSkeletonForCharacter(char)
     end
 
     headMarker = Instance.new("Frame")
-    headMarker.Name = "DeveloperSkeletonHead"
+    headMarker.Name = "DeveloperSkeletonononononononononononononononononHead"
     headMarker.AnchorPoint = Vector2.new(0.5, 0.5)
     headMarker.Size = UDim2.fromOffset(10, 10)
     headMarker.BackgroundColor3 = CONFIG.Colors.Skeleton
@@ -1335,7 +1330,7 @@ local function CreateSkeletonForCharacter(char)
 
     for _, pair in ipairs(pairsToUse) do
         local glow = Instance.new("Frame")
-        glow.Name = "DeveloperSkeletonGlow"
+        glow.Name = "DeveloperSkeletonononononononononononononononononGlow"
         glow.AnchorPoint = Vector2.new(0.5, 0.5)
         glow.BorderSizePixel = 0
         glow.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
@@ -1346,7 +1341,7 @@ local function CreateSkeletonForCharacter(char)
         glow.Parent = Overlay
 
         local frame = Instance.new("Frame")
-        frame.Name = "DeveloperSkeletonLine"
+        frame.Name = "DeveloperSkeletonononononononononononononononononLine"
         frame.AnchorPoint = Vector2.new(0.5, 0.5)
         frame.BorderSizePixel = 0
         frame.BackgroundColor3 = CONFIG.Colors.Skeleton
@@ -1360,7 +1355,7 @@ local function CreateSkeletonForCharacter(char)
     for name in pairs(jointNames) do
         if name ~= "Head" then
             local dot = Instance.new("Frame")
-            dot.Name = "DeveloperSkeletonJoint"
+            dot.Name = "DeveloperSkeletonononononononononononononononononJoint"
             dot.AnchorPoint = Vector2.new(0.5, 0.5)
             dot.Size = UDim2.fromOffset(6, 6)
             dot.BackgroundColor3 = CONFIG.Colors.Skeleton
@@ -1748,7 +1743,6 @@ function DisableInfiniteJump()
     end
 end
 
--- BunnyHop connection is stored on State to keep the top-level local register count low
 function EnableBunnyHop()
     if State.BunnyHopConn then return end
     State.BunnyHopConn = RunService.Heartbeat:Connect(function()
@@ -2109,7 +2103,7 @@ local function TeleportToFreecamCamera()
     FreecamSavedRootCFrame = targetCFrame
     hrp.Anchored = true
 
-    if Notify then Notify("Freecam", "Geteleporteerd naar camerastand.", true) end
+    if Notify then Notify("Freecam", "Teleported to camera position.", true) end
 end
 
 function ApplyFullbright(enabled)
@@ -2170,7 +2164,7 @@ Notify = function(titleText, bodyText, force)
     title.TextSize = 12
     title.TextColor3 = CONFIG.Colors.Accent
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Text = tostring(titleText or "Notificatie")
+    title.Text = tostring(titleText or "Notification")
     title.Parent = card
 
     local body = Instance.new("TextLabel")
@@ -2425,7 +2419,7 @@ RefreshSelectedProtectionUI = function()
     local plr = State.SelectedPlayer
     local protected = IsProtectedPlayer(plr)
     if MiscUI.ProtectedStatusLabel then
-        MiscUI.ProtectedStatusLabel.Text = protected and "Bescherming: AAN" or "Bescherming: UIT"
+        MiscUI.ProtectedStatusLabel.Text = protected and "Protection: ON" or "Protection: OFF"
         MiscUI.ProtectedStatusLabel.TextColor3 = protected and CONFIG.Colors.ProtectedESP or CONFIG.Colors.SubText
     end
     if MiscUI.ProtectedAddButton then
@@ -2497,7 +2491,7 @@ RefreshPlayerListUI = function()
                 State.SelectedPlayer = plr
                 State.PlayerActionExpanded = (State.PlayerActionExpanded == plr) and nil or plr
                 if MiscUI.SelectedLabel then
-                    MiscUI.SelectedLabel.Text = "Geselecteerd: @" .. plr.Name
+                    MiscUI.SelectedLabel.Text = "Selected: @" .. plr.Name
                 end
                 RefreshSelectedProtectionUI()
                 RefreshPlayerListUI()
@@ -2561,21 +2555,21 @@ end
 State.TeleportToSelectedPlayer = function()
     local target = State.SelectedPlayer
     if not target or target == LocalPlayer or not target.Parent then
-        if Notify then Notify("Teleport", "Selecteer eerst een geldige speler.", true) end
+        if Notify then Notify("Teleport", "Select a valid player first.", true) end
         return false
     end
 
     local myChar = LocalPlayer.Character
     local myRoot = myChar and myChar:FindFirstChild("HumanoidRootPart")
     if not myChar or not myRoot then
-        if Notify then Notify("Teleport", "Jouw character is nog niet geladen.", true) end
+        if Notify then Notify("Teleport", "Your character is not loaded yet.", true) end
         return false
     end
 
     local targetChar = target.Character
     local targetRoot = targetChar and (targetChar:FindFirstChild("HumanoidRootPart") or targetChar:WaitForChild("HumanoidRootPart", 2))
     if not targetRoot then
-        if Notify then Notify("Teleport", "De geselecteerde speler heeft geen HumanoidRootPart.", true) end
+        if Notify then Notify("Teleport", "The selected player has no HumanoidRootPart.", true) end
         return false
     end
 
@@ -2584,7 +2578,7 @@ State.TeleportToSelectedPlayer = function()
     myRoot.AssemblyLinearVelocity = Vector3.zero
     myRoot.AssemblyAngularVelocity = Vector3.zero
 
-    -- Sommige character controllers zetten CFrame direct terug; probeer kort opnieuw.
+    
     task.spawn(function()
         for i = 1, 6 do
             task.wait(0.05)
@@ -2598,7 +2592,7 @@ State.TeleportToSelectedPlayer = function()
         end
     end)
 
-    if Notify then Notify("Teleport", "Geteleporteerd naar @" .. target.Name .. ".", true) end
+    if Notify then Notify("Teleport", "Teleported to @" .. target.Name .. ".", true) end
     return true
 end
 
@@ -2651,13 +2645,13 @@ State.StartSpectatingSelectedPlayer = function()
     local target = State.SelectedPlayer
     if not target or target == LocalPlayer or not target.Parent then
         State.Features.Spectate = false
-        if Notify then Notify("Spectate", "Selecteer eerst een speler in de Playerlist.", true) end
+        if Notify then Notify("Spectate", "Select a player in the Player List first.", true) end
         return false
     end
 
     if State.Features.Freecam then
         State.Features.Spectate = false
-        if Notify then Notify("Spectate", "Zet Freecam eerst uit.", true) end
+        if Notify then Notify("Spectate", "Disable Freecam first.", true) end
         return false
     end
 
@@ -2690,7 +2684,7 @@ State.StartSpectatingSelectedPlayer = function()
     end)
 
     if not ApplySpectateTarget(target) then
-        -- Wacht kort op de character/humanoid voordat we opgeven.
+        
         local char = target.Character or target.CharacterAdded:Wait()
         local hum = char and char:FindFirstChildOfClass("Humanoid") or (char and char:WaitForChild("Humanoid", 2))
         if hum and Camera then
@@ -2698,12 +2692,12 @@ State.StartSpectatingSelectedPlayer = function()
             Camera.CameraSubject = hum
         else
             State.StopSpectatingSelectedPlayer()
-            if Notify then Notify("Spectate", "Deze speler heeft momenteel geen Humanoid.", true) end
+            if Notify then Notify("Spectate", "This player currently has no Humanoid.", true) end
             return false
         end
     end
 
-    if Notify then Notify("Spectate", "Nu kijk je mee met " .. target.Name .. ".", true) end
+    if Notify then Notify("Spectate", "Now spectating " .. target.Name .. ".", true) end
     return true
 end
 
@@ -2757,13 +2751,13 @@ State.UpdateInventoryView = function()
 
     local target = State.SelectedPlayer
     if not target or target == LocalPlayer or not target.Parent then
-        MiscUI.InventoryLabel.Text = "Geselecteerd: geen speler"
+        MiscUI.InventoryLabel.Text = "Selected: none"
         return
     end
 
     local inventory = target:FindFirstChild("Inventory") or target:FindFirstChild("Inevtorie")
     if not inventory then
-        MiscUI.InventoryLabel.Text = "@" .. target.Name .. "\nInventory: niet gevonden"
+        MiscUI.InventoryLabel.Text = "@" .. target.Name .. "\nInventory: not found"
         return
     end
 
@@ -2790,7 +2784,7 @@ State.UpdateInventoryView = function()
     table.sort(items, function(a, b) return a:lower() < b:lower() end)
 
     if #items == 0 then
-        MiscUI.InventoryLabel.Text = "@" .. target.Name .. "\nGeen inventory-items met Value >= 1"
+        MiscUI.InventoryLabel.Text = "@" .. target.Name .. "\nNo inventory items with Value >= 1"
     else
         MiscUI.InventoryLabel.Text = "@" .. target.Name .. "\n" .. table.concat(items, "\n")
     end
@@ -2856,7 +2850,7 @@ local function RefreshToolViewer()
                 local label = gui:FindFirstChildOfClass("TextLabel")
                 if label then
                     local tools = GetPlayerTools(plr)
-                    label.Text = plr.DisplayName .. "\nTools: " .. (#tools > 0 and table.concat(tools, ", ") or "geen lokaal zichtbare tools")
+                    label.Text = plr.DisplayName .. "\nTools: " .. (#tools > 0 and table.concat(tools, ", ") or "no locally visible tools")
                     gui.MaxDistance = State.Sliders.ESPDistance
                 end
             end
@@ -2877,7 +2871,7 @@ end)
 do
     local page = Pages.Visuals
     CreateSectionLabel(page, "ESP VISUALS", 1)
-    CreateToggle(page, "Player ESP (naam + afstand + HP)", false, 2, function(v)
+    CreateToggle(page, "Player ESP (name + distance + HP)", false, 2, function(v)
         State.Features.ESP = v
         RefreshTracking()
         for _, objs in pairs(State.ESPObjects) do
@@ -2893,7 +2887,7 @@ do
         State.Features.Healthbar = v
         RefreshTracking()
     end, "Healthbar", "HealthGood")
-    CreateToggle(page, "Skeleton ESP (R6 + R15)", false, 5, function(v)
+    CreateToggle(page, "Skeletononononononononononononononononon ESP (R6 + R15)", false, 5, function(v)
         State.Features.SkeletonESP = v
         RefreshTracking()
         for plr, objs in pairs(State.ESPObjects) do
@@ -2906,8 +2900,8 @@ do
                 end
             end
         end
-    end, "SkeletonESP", "Skeleton")
-    CreateToggle(page, "Chams (zichtbaar door muren)", false, 6, function(v)
+    end, "SkeletonononononononononononononononononESP", "Skeletononononononononononononononononon")
+    CreateToggle(page, "Chams (visible through walls)", false, 6, function(v)
         State.Features.Chams = v
         RefreshTracking()
         for _, objs in pairs(State.ESPObjects) do
@@ -2922,21 +2916,21 @@ do
         State.Features.ChamsTeamColor = v
         ApplyESPColors()
     end, "ChamsTeamColor")
-    CreateToggle(page, "Tracers (lijnen naar spelers)", false, 8, function(v)
+    CreateToggle(page, "Tracers (lines to players)", false, 8, function(v)
         State.Features.Tracers = v
         RefreshTracking()
     end, "Tracers", "Tracer")
-    CreateSlider(page, "Max ESP-afstand", 50, 1000, State.Sliders.ESPDistance, 9, function(v)
+    CreateSlider(page, "Max ESP distance", 50, 1000, State.Sliders.ESPDistance, 9, function(v)
         State.Sliders.ESPDistance = v
     end)
-    CreateInfoLabel(page, "Box ESP tekent een 2D-kader rond spelers. Healthbar toont live HP naast het kader. Chams Team Color gebruikt de Roblox TeamColor van de speler.", 10)
+    CreateInfoLabel(page, "Box ESP draws a 2D box around players. Healthbar shows live HP next to the box. Chams Team Color uses the player's Roblox TeamColor.", 10)
 end
 
 do
     local page = Pages.Combat
     CreateSectionLabel(page, "AIM ASSIST", 1)
     CreateAimTargetDropdown(page)
-    CreateToggle(page, "Aim Assist inschakelen", false, 3, function(v)
+    CreateToggle(page, "Enable Aim Assist", false, 3, function(v)
         State.Features.AimAssist = v
     end, "AimAssist", "AimTarget")
     CreateToggle(page, "Team Check", false, 4, function(v)
@@ -2945,26 +2939,15 @@ do
     CreateToggle(page, "Wall Check", false, 5, function(v)
         State.Features.WallCheck = v
     end, "WallCheck")
-    CreateToggle(page, "Silent Aim", false, 6, function(v)
-        State.Features.SilentAim = v
-    end, "SilentAim")
     CreateSlider(page, "Aim Assist FOV (pixels)", 20, 400, State.Sliders.AimFOV, 7, function(v)
         State.Sliders.AimFOV = v
-    end)
-    CreateSlider(page, "Silent Aim FOV (pixels)", 20, 500, State.Sliders.SilentAimFOV, 8, function(v)
-        State.Sliders.SilentAimFOV = v
-    end)
-    CreateSlider(page, "Silent Aim Hit Chance", 0, 100, State.Sliders.SilentAimHitChance, 9, function(v)
-        State.Sliders.SilentAimHitChance = v
     end)
     CreateSlider(page, "Aim Smoothness", 0.05, 1, State.Sliders.AimSmoothness, 10, function(v)
         State.Sliders.AimSmoothness = v
     end, 2)
-    CreateToggle(page, "FOV-cirkel tonen", false, 11, function(v)
+    CreateToggle(page, "Show FOV circle", false, 11, function(v)
         State.Features.ShowFOV = v
     end, "ShowFOV", "Accent")
-    CreateInfoLabel(page, "Silent Aim gebruikt een eigen FOV en hit chance; de target blijft via GetSilentAimTarget() beschikbaar voor je weapon-code.", 12)
-end
 
 function State.FindDexExplorerGuis()
     local found = {}
@@ -2995,13 +2978,13 @@ function State.SetDexExplorerEnabled(enabled)
     end
 
     if enabled and #guis == 0 and Notify then
-        Notify("Dex Explorer", "Geen bestaande Dex Explorer GUI gevonden.", true)
+        Notify("Dex Explorer", "No existing Dex Explorer GUI found.", true)
     end
 end
 
 do
     local page = Pages.Movement
-    CreateSectionLabel(page, "Snelheid", 1)
+    CreateSectionLabel(page, "Speed", 1)
     CreateSlider(page, "WalkSpeed", 16, 200, State.Sliders.WalkSpeed, 2, function(v)
         State.Sliders.WalkSpeed = v
         local hum = GetHumanoid()
@@ -3029,7 +3012,7 @@ do
         State.Features.Fly = v
         if v then EnableFly() else DisableFly() end
     end, "Fly")
-    CreateInfoLabel(page, "Bunny Hop springt automatisch zodra je de grond raakt. Fly gebruikt WASD + Space/Ctrl.", 9)
+    CreateInfoLabel(page, "Bunny Hop automatically jumps when you touch the ground. Fly uses WASD + Space/Ctrl.", 9)
 end
 
 do
@@ -3051,28 +3034,28 @@ do
         State.Sliders.CameraFOV = v
         if Camera then Camera.FieldOfView = v end
     end)
-    CreateActionButton(page, "Teleport naar Spawn", 6, function()
+    CreateActionButton(page, "Teleport to Spawn", 6, function()
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local spawnPoint = Workspace:FindFirstChildWhichIsA("SpawnLocation", true)
         if hrp and spawnPoint then hrp.CFrame = spawnPoint.CFrame + Vector3.new(0, 5, 0) end
     end, "TeleportSpawn")
-    CreateActionButton(page, "Teleport naar Freecam-camera", 7, TeleportToFreecamCamera, "FreecamTeleport")
-    CreateInfoLabel(page, "Freecam bevriest je karakter. Druk RightCtrl om naar de camerastand te teleporteren.", 8)
+    CreateActionButton(page, "Teleport to Freecam camera", 7, TeleportToFreecamCamera, "FreecamTeleport")
+    CreateInfoLabel(page, "Freecam freezes your character. Press RightCtrl to teleport to the camera position.", 8)
 end
 
 do
     local page = Pages.World
     CreateSectionLabel(page, "Omgeving", 1)
-    CreateSlider(page, "Tijd van de dag", 0, 24, State.Sliders.TimeOfDay, 2, function(v)
+    CreateSlider(page, "Time of day", 0, 24, State.Sliders.TimeOfDay, 2, function(v)
         State.Sliders.TimeOfDay = v
         Lighting.ClockTime = v
     end, 1)
-    CreateSlider(page, "Zwaartekracht", 0, 400, State.Sliders.Gravity, 3, function(v)
+    CreateSlider(page, "Gravity", 0, 400, State.Sliders.Gravity, 3, function(v)
         State.Sliders.Gravity = v
         Workspace.Gravity = v
     end, 1)
-    CreateToggle(page, "Fog verwijderen", false, 4, function(v)
+    CreateToggle(page, "Remove Fog", false, 4, function(v)
         State.Features.RemoveFog = v
         ApplyRemoveFog(v)
     end, "RemoveFog")
@@ -3088,25 +3071,25 @@ local ChatLogGui, ChatLogWindow, ChatLogBody
 local InventoryGui, InventoryWindow, InventoryBody
 do
     local page = Pages.Misc
-    CreateSectionLabel(page, "Losse vensters", 1)
-    CreateToggle(page, "Chatlog venster", false, 2, function(v)
+    CreateSectionLabel(page, "Utility windows", 1)
+    CreateToggle(page, "Chat Log window", false, 2, function(v)
         State.Features.ChatLog = v
         if SetMiscWindowVisible and ChatLogWindow then SetMiscWindowVisible(ChatLogWindow, v) end
         if MiscUI.ChatLogFrame then MiscUI.ChatLogFrame.Visible = v end
         if v then RebuildChatLog() end
     end, "ChatLog")
-    CreateToggle(page, "Playerlist venster", false, 3, function(v)
+    CreateToggle(page, "Player List window", false, 3, function(v)
         State.Features.PlayerList = v
         if SetMiscWindowVisible and PlayerListWindow then SetMiscWindowVisible(PlayerListWindow, v) end
         if MiscUI.PlayerListFrame then MiscUI.PlayerListFrame.Visible = v end
         if v then RefreshPlayerListUI() end
     end, "PlayerList")
-    CreateToggle(page, "Inventory View venster", false, 4, function(v)
+    CreateToggle(page, "Inventory View window", false, 4, function(v)
         State.Features.InventoryView = v
         if SetMiscWindowVisible and InventoryWindow then SetMiscWindowVisible(InventoryWindow, v) end
         State.UpdateInventoryView()
     end, "InventoryView")
-    CreateToggle(page, "Tool Viewer (door muren)", false, 5, function(v)
+    CreateToggle(page, "Tool Viewer (through walls)", false, 5, function(v)
         State.Features.ToolViewer = v
         RefreshToolViewer()
     end, "ToolViewer")
@@ -3114,7 +3097,7 @@ do
         State.Features.DexExplorer = v
         State.SetDexExplorerEnabled(v)
     end, "DexExplorer")
-    CreateInfoLabel(page, "Dex Explorer toggle beheert een bestaande Dex/Dex Explorer ScreenGui in PlayerGui.", 7)
+    CreateInfoLabel(page, "Dex Explorer toggles an existing Dex/Dex Explorer ScreenGui in PlayerGui.", 7)
 end
 
 local function MakeWindow(titleText, size, position, guiName)
@@ -3291,7 +3274,7 @@ selected.Font=Enum.Font.Gotham
 selected.TextSize=11
 selected.TextColor3=CONFIG.Colors.SubText
 selected.TextXAlignment=Enum.TextXAlignment.Left
-selected.Text="Geselecteerd: niemand"
+selected.Text="Selected: none"
 selected.Parent=PlayerListBody
 MiscUI.SelectedLabel=selected
 
@@ -3359,7 +3342,7 @@ MiscUI.InventoryLabel.TextColor3=CONFIG.Colors.Text
 MiscUI.InventoryLabel.TextXAlignment=Enum.TextXAlignment.Left
 MiscUI.InventoryLabel.TextYAlignment=Enum.TextYAlignment.Top
 MiscUI.InventoryLabel.TextWrapped=true
-MiscUI.InventoryLabel.Text="Geselecteerd: geen speler"
+MiscUI.InventoryLabel.Text="Selected: none"
 MiscUI.InventoryLabel.Parent=InventoryBody
 
 PlayerListWindow.Visible=false
@@ -3385,7 +3368,7 @@ Players.PlayerRemoving:Connect(function(plr)
     if State.SelectedPlayer == plr then
         State.SelectedPlayer = nil
         State.PlayerActionExpanded = nil
-        if MiscUI.SelectedLabel then MiscUI.SelectedLabel.Text = "Geselecteerd: niemand" end
+        if MiscUI.SelectedLabel then MiscUI.SelectedLabel.Text = "Selected: none" end
         RefreshSelectedProtectionUI()
         if State.UpdateInventoryView then State.UpdateInventoryView() end
     end
@@ -3490,20 +3473,20 @@ do
         UIScaleInst.Scale = v
     end, 2)
 
-    CreateToggle(page, "Notificaties", State.Features.Notifications, 4, function(v)
+    CreateToggle(page, "Notifications", State.Features.Notifications, 4, function(v)
         State.Features.Notifications = v
     end, "Notifications")
-    CreateToggle(page, "Freecam bar verbergen", State.Features.HideFreecamBar, 5, function(v)
+    CreateToggle(page, "Hide Freecam bar", State.Features.HideFreecamBar, 5, function(v)
         State.Features.HideFreecamBar = v
         if v then FreecamStatusLabel.Visible = false end
     end, "HideFreecamBar")
-    CreateInfoLabel(page, "Pas hier menu, notificaties en Freecam-weergave aan.", 6)
+    CreateInfoLabel(page, "Configure the menu, notifications and Freecam display here.", 6)
 
-    CreateActionButton(page, "Config opslaan", 10, function() SavedConfigs.Default = CaptureConfig() end, "SaveConfig")
-    CreateActionButton(page, "Config laden", 11, function() ApplyConfig(SavedConfigs.Default) end, "LoadConfig")
+    CreateActionButton(page, "Save config", 10, function() SavedConfigs.Default = CaptureConfig() end, "SaveConfig")
+    CreateActionButton(page, "Load config", 11, function() ApplyConfig(SavedConfigs.Default) end, "LoadConfig")
     CreateActionButton(page, "Uninject / Unload", 12, UnloadMenu, "UnloadMenu")
     CreateSectionLabel(page, "Reset", 13)
-    CreateActionButton(page, "Reset alle instellingen", 14, function()
+    CreateActionButton(page, "Reset all settings", 14, function()
         for _, t in ipairs(ToggleRefs) do t.ref.SetState(t.default) end
         for _, sref in ipairs(SliderRefs) do sref.ref.Set(sref.default) end
         if Camera then Camera.FieldOfView = Originals.FieldOfView end
@@ -3514,7 +3497,7 @@ do
         Lighting.OutdoorAmbient = Originals.OutdoorAmbient
         Lighting.GlobalShadows = Originals.GlobalShadows
     end, "ResetSettings")
-    CreateInfoLabel(page, "Feature-keybinds beginnen leeg. Klik op de kleine toetsknop op een feature om er zelf één te kiezen.", 15)
+    CreateInfoLabel(page, "Feature keybinds start empty. Click the small key button on a feature to choose one.", 15)
 end
 
 local KeyGateBusy = false
@@ -3750,16 +3733,12 @@ do
 end
 
 RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Value + 1, function()
-    State.SilentAimTarget = nil
-    State.SilentAimTargetPart = nil
-    if not State.Features.AimAssist and not State.Features.SilentAim then return end
+    if not State.Features.AimAssist then return end
     if not Camera then return end
-    if not State.Features.SilentAim and not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+    if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
 
     local viewportCenter = Camera.ViewportSize / 2
     local nearestPart, nearestScreenDist = nil, math.huge
-    local nearestPlayer = nil
-    local activeFOV = State.Features.SilentAim and State.Sliders.SilentAimFOV or State.Sliders.AimFOV
 
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
@@ -3772,9 +3751,8 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
                 local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
                 if onScreen and screenPos.Z > 0 then
                     local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - viewportCenter).Magnitude
-                    if screenDist <= activeFOV and screenDist < nearestScreenDist then
+                    if screenDist <= State.Sliders.AimFOV and screenDist < nearestScreenDist then
                         nearestPart = targetPart
-                        nearestPlayer = plr
                         nearestScreenDist = screenDist
                     end
                 end
@@ -3783,26 +3761,10 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
     end
 
     if nearestPart then
-        if State.Features.SilentAim then
-            State.SilentAimTarget = nearestPlayer
-            State.SilentAimTargetPart = nearestPart
-        end
-        if State.Features.AimAssist and not State.Features.SilentAim then
-            local targetCFrame = CFrame.new(Camera.CFrame.Position, nearestPart.Position)
-            Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, State.Sliders.AimSmoothness)
-        end
+        local targetCFrame = CFrame.new(Camera.CFrame.Position, nearestPart.Position)
+        Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, State.Sliders.AimSmoothness)
     end
 end)
-
-local function GetSilentAimTarget()
-    if not State.Features.SilentAim then return nil, nil end
-    if not State.SilentAimTarget or not State.SilentAimTargetPart then return nil, nil end
-    local chance = math.clamp(State.Sliders.SilentAimHitChance, 0, 100)
-    if chance < 100 and math.random(1, 100) > chance then
-        return nil, nil
-    end
-    return State.SilentAimTarget, State.SilentAimTargetPart
-end
 
 local fpsAccum, fpsFrames = 0, 0
 
@@ -3822,7 +3784,7 @@ RunService.Heartbeat:Connect(function(dt)
 
     if State.Features.ShowFOV then
         local vp = Camera.ViewportSize
-        local fov = State.Features.SilentAim and State.Sliders.SilentAimFOV or State.Sliders.AimFOV
+        local fov = State.Sliders.AimFOV
         FOVCircle.Visible = true
         FOVCircle.Position = UDim2.fromOffset(vp.X / 2, vp.Y / 2)
         FOVCircle.Size = UDim2.fromOffset(fov * 2, fov * 2)
@@ -4048,4 +4010,4 @@ if LocalPlayer.Character then
     task.spawn(OnCharacterAdded, LocalPlayer.Character)
 end
 
-print("[BravoHack] Geladen. Druk op "..CONFIG.Keybinds.ToggleMenu.Name.." om het menu te openen.")
+print("[BravoHack] Loaded. Press "..CONFIG.Keybinds.ToggleMenu.Name.." om het menu te openen.")
