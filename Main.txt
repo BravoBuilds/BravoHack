@@ -1,3 +1,4 @@
+
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
 local UserInputService   = game:GetService("UserInputService")
@@ -137,20 +138,20 @@ local TI_FAST = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.
 local TI_MED  = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local TI_SLOW = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
-local function Tween(obj, info, props)
+function Tween(obj, info, props)
     local tw = TweenService:Create(obj, info, props)
     tw:Play()
     return tw
 end
 
-local function NewCorner(radius, parent)
+function NewCorner(radius, parent)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, radius or 8)
     c.Parent = parent
     return c
 end
 
-local function NewStroke(parent, color, thickness, transparency)
+function NewStroke(parent, color, thickness, transparency)
     local s = Instance.new("UIStroke")
     s.Color = color or CONFIG.Colors.Stroke
     s.Thickness = thickness or 1
@@ -169,6 +170,7 @@ ScreenGui.Name = "CheatMenuGUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.DisplayOrder = 10000
+ScreenGui.Enabled = true
 ScreenGui.Parent = PlayerGui
 
 local Overlay = Instance.new("ScreenGui")
@@ -185,6 +187,7 @@ KeyGate.Gui.ResetOnSpawn = false
 KeyGate.Gui.IgnoreGuiInset = true
 KeyGate.Gui.DisplayOrder = 20000
 KeyGate.Gui.Parent = PlayerGui
+KeyGate.Gui.Enabled = true
 
 KeyGate.Frame = Instance.new("Frame")
 KeyGate.Frame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -255,7 +258,7 @@ KeyGate.Status.Size = UDim2.new(1, -40, 0, 20)
 KeyGate.Status.Font = Enum.Font.Gotham
 KeyGate.Status.TextSize = 11
 KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
-KeyGate.Status.Text = "Checking access..."
+KeyGate.Status.Text = "Enter your access key."
 KeyGate.Status.Parent = KeyGate.Frame
 
 local MainFrame = Instance.new("Frame")
@@ -519,7 +522,7 @@ for i, name in ipairs(categories) do
     SidebarButtons[name] = btn
 end
 
-local function RefreshTabVisuals()
+function RefreshTabVisuals()
     for tabName, tabButton in pairs(SidebarButtons) do
         local selected = (tabName == State.CurrentTab)
         Tween(tabButton, TI_FAST, {
@@ -541,7 +544,7 @@ local function RefreshTabVisuals()
     TabTitle.Text = State.CurrentTab
 end
 
-local function SwitchTab(name)
+function SwitchTab(name)
     if not Pages[name] or not SidebarButtons[name] then return end
     local previousPage = Pages[State.CurrentTab]
     local nextPage = Pages[name]
@@ -593,7 +596,7 @@ local ApplyESPColors
 local FOVStroke
 local Notify
 
-local function CreateSectionLabel(parent, text, order)
+function CreateSectionLabel(parent, text, order)
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 20)
     lbl.BackgroundTransparency = 1
@@ -607,7 +610,7 @@ local function CreateSectionLabel(parent, text, order)
     return lbl
 end
 
-local function OpenColorPicker(colorName, titleText)
+function OpenColorPicker(colorName, titleText)
     if ColorPickerGui then ColorPickerGui:Destroy() end
     ColorPickerGui = Instance.new("ScreenGui")
     ColorPickerGui.Name = "DeveloperColorPicker"
@@ -769,7 +772,7 @@ local function OpenColorPicker(colorName, titleText)
     info.Parent=frame
 end
 
-local function CreateToggle(parent, text, default, order, callback, keyName, colorName)
+function CreateToggle(parent, text, default, order, callback, keyName, colorName)
     local hasKey = keyName ~= nil
     local hasColor = colorName ~= nil
     local reserved = 60 + (hasKey and 68 or 0) + (hasColor and 30 or 0)
@@ -904,7 +907,7 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
     return ref
 end
 
-local function CreateSlider(parent, text, min, max, default, order, callback, decimals)
+function CreateSlider(parent, text, min, max, default, order, callback, decimals)
     decimals = decimals or 0
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 46)
@@ -1015,7 +1018,7 @@ local function CreateSlider(parent, text, min, max, default, order, callback, de
     return ref
 end
 
-local function CreateKeybind(parent, text, defaultKey, order, callback)
+function CreateKeybind(parent, text, defaultKey, order, callback)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 34)
     row.BackgroundColor3 = CONFIG.Colors.Panel
@@ -1069,7 +1072,7 @@ local function CreateKeybind(parent, text, defaultKey, order, callback)
     return row
 end
 
-local function CreateActionButton(parent, text, order, callback, keyName)
+function CreateActionButton(parent, text, order, callback, keyName)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, keyName and 42 or 34)
     row.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
@@ -1160,7 +1163,7 @@ local function CreateActionButton(parent, text, order, callback, keyName)
     return row
 end
 
-local function TriggerKeybind(keyCode)
+function TriggerKeybind(keyCode)
     if not keyCode then return false end
     for _, entry in pairs(FeatureKeybindRefs) do
         local bound = entry.Get and entry.Get()
@@ -1179,7 +1182,7 @@ local function TriggerKeybind(keyCode)
     return false
 end
 
-local function CreateInfoLabel(parent, text, order)
+function CreateInfoLabel(parent, text, order)
     local lbl = Instance.new("TextLabel")
     lbl.Size = UDim2.new(1, 0, 0, 18)
     lbl.BackgroundTransparency = 1
@@ -1299,7 +1302,7 @@ DestroySkeletonLines = function(objs)
     if objs then objs.SkeletonHead = nil end
 end
 
-local function CreateSkeletonForCharacter(char)
+function CreateSkeletonForCharacter(char)
     local segments = {}
     local headMarker = nil
     local joints = {}
@@ -1370,14 +1373,14 @@ local function CreateSkeletonForCharacter(char)
     return segments, headMarker, joints
 end
 
-local function RebuildSkeleton(plr)
+function RebuildSkeleton(plr)
     local objs = State.ESPObjects[plr]
     if not objs or not objs.Character or objs.Character ~= plr.Character then return end
     DestroySkeletonLines(objs)
     objs.SkeletonSegments, objs.SkeletonHead, objs.SkeletonJoints = CreateSkeletonForCharacter(objs.Character)
 end
 
-local function GetCharacterScreenBounds(char, camera)
+function GetCharacterScreenBounds(char, camera)
     if not char or not camera then return nil end
     local ok, cf, size = pcall(function() return char:GetBoundingBox() end)
     if not ok or not cf or not size then return nil end
@@ -1861,7 +1864,7 @@ end
 
 local ForceFieldInstance
 
-local function EnableForceField()
+function EnableForceField()
     local char = LocalPlayer.Character
     if not char then return end
     if ForceFieldInstance and ForceFieldInstance.Parent == char then return end
@@ -1876,7 +1879,7 @@ local function EnableForceField()
     ForceFieldInstance = ff
 end
 
-local function DisableForceField()
+function DisableForceField()
     if ForceFieldInstance then
         ForceFieldInstance:Destroy()
         ForceFieldInstance = nil
@@ -1904,7 +1907,7 @@ local FreecamSavedWalkSpeed = nil
 local FreecamSavedJumpPower = nil
 local FreecamChatFocused = false
 
-local function FreezeCharacterForFreecam(forceCapture)
+function FreezeCharacterForFreecam(forceCapture)
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -1926,7 +1929,7 @@ local function FreezeCharacterForFreecam(forceCapture)
     return true
 end
 
-local function RestoreCharacterAfterFreecam()
+function RestoreCharacterAfterFreecam()
     local char = LocalPlayer.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -1947,14 +1950,14 @@ local function RestoreCharacterAfterFreecam()
     FreecamSavedJumpPower = nil
 end
 
-local function SetFreecamCamera()
+function SetFreecamCamera()
     if not Camera or not FreecamPosition then return end
     local rotation = CFrame.fromOrientation(FreecamPitch, FreecamYaw, 0)
     Camera.CFrame = CFrame.new(FreecamPosition) * rotation
     Camera.Focus = CFrame.new(FreecamPosition + rotation.LookVector * 100)
 end
 
-local function SetFreecamInputMode(chatFocused)
+function SetFreecamInputMode(chatFocused)
     if chatFocused then
 
         UserInputService.MouseBehavior = Enum.MouseBehavior.Default
@@ -1965,7 +1968,7 @@ local function SetFreecamInputMode(chatFocused)
     end
 end
 
-local function FocusRobloxChat()
+function FocusRobloxChat()
     ChatInputBarConfiguration = TextChatService:FindFirstChild("ChatInputBarConfiguration") or ChatInputBarConfiguration
     if ChatInputBarConfiguration and ChatInputBarConfiguration.Enabled then
         local textBox = ChatInputBarConfiguration.TextBox
@@ -2090,7 +2093,7 @@ function DisableFreecam()
     end)
 end
 
-local function TeleportToFreecamCamera()
+function TeleportToFreecamCamera()
     if not State.Features.Freecam or not FreecamPosition then return end
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
@@ -2192,7 +2195,7 @@ end
 
 local AimTargetDropdownRef
 
-local function CreateAimTargetDropdown(parent)
+function CreateAimTargetDropdown(parent)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 66)
     row.BackgroundColor3 = CONFIG.Colors.Panel
@@ -2341,12 +2344,12 @@ local function CreateAimTargetDropdown(parent)
     return row
 end
 
-local function GetAimTargetPart(char)
+function GetAimTargetPart(char)
     if not char or not State.AimTargetPart then return nil end
     return char:FindFirstChild(State.AimTargetPart)
 end
 
-local function AimTargetVisible(targetPart)
+function AimTargetVisible(targetPart)
     if not targetPart or not Camera then return false end
     if not State.Features.WallCheck then return true end
     local origin = Camera.CFrame.Position
@@ -2363,7 +2366,7 @@ end
 
 local MiscUI = {}
 
-local function GetPlayerTools(plr)
+function GetPlayerTools(plr)
     local names, seen = {}, {}
     if not plr then return names end
 
@@ -2391,7 +2394,7 @@ local function GetPlayerTools(plr)
     return names
 end
 
-local function FindCrosshairPlayer()
+function FindCrosshairPlayer()
     if not Camera then return nil end
     local vp = Camera.ViewportSize
     local ray = Camera:ViewportPointToRay(vp.X * 0.5, vp.Y * 0.5)
@@ -2600,7 +2603,7 @@ local SpectateSavedCameraType = nil
 local SpectateSavedCameraSubject = nil
 local SpectateCharacterConn = nil
 
-local function ApplySpectateTarget(plr)
+function ApplySpectateTarget(plr)
     if not plr or plr == LocalPlayer then return false end
     Camera = Workspace.CurrentCamera or Camera
     if not Camera then return false end
@@ -2700,7 +2703,7 @@ State.StartSpectatingSelectedPlayer = function()
     return true
 end
 
-local function AddChatMessage(text)
+function AddChatMessage(text)
     if not text or text == "" then return end
     table.insert(State.ChatMessages, text)
     while #State.ChatMessages > 100 do
@@ -2722,7 +2725,7 @@ local function AddChatMessage(text)
     log.CanvasPosition = Vector2.new(0, math.max(0, log.AbsoluteCanvasSize.Y))
 end
 
-local function RebuildChatLog()
+function RebuildChatLog()
     local log = MiscUI.ChatLogFrame
     if not log then return end
     for _, child in ipairs(log:GetChildren()) do
@@ -2791,7 +2794,7 @@ end
 
 local ToolViewerObjects = {}
 
-local function RemoveToolViewerForPlayer(plr)
+function RemoveToolViewerForPlayer(plr)
     local gui = ToolViewerObjects[plr]
     if gui then
         pcall(function() gui:Destroy() end)
@@ -2799,7 +2802,7 @@ local function RemoveToolViewerForPlayer(plr)
     end
 end
 
-local function CreateToolViewerForPlayer(plr)
+function CreateToolViewerForPlayer(plr)
     if not plr or plr == LocalPlayer or not State.Features.ToolViewer then return end
     local char = plr.Character
     local head = char and char:FindFirstChild("Head")
@@ -2828,7 +2831,7 @@ local function CreateToolViewerForPlayer(plr)
     ToolViewerObjects[plr] = gui
 end
 
-local function RefreshToolViewer()
+function RefreshToolViewer()
     for plr in pairs(ToolViewerObjects) do
         if not State.Features.ToolViewer then
             RemoveToolViewerForPlayer(plr)
@@ -3099,7 +3102,7 @@ do
     CreateInfoLabel(page, "Dex Explorer toggles an existing Dex/Dex Explorer ScreenGui in PlayerGui.", 7)
 end
 
-local function MakeWindow(titleText, size, position, guiName)
+function MakeWindow(titleText, size, position, guiName)
     local gui = Instance.new("ScreenGui")
     gui.Name = guiName
     gui.ResetOnSpawn = false
@@ -3348,7 +3351,7 @@ PlayerListWindow.Visible=false
 ChatLogWindow.Visible=false
 InventoryWindow.Visible=false
 
-local function BindChatPlayer(plr)
+function BindChatPlayer(plr)
     plr.Chatted:Connect(function(message)
         AddChatMessage(plr.Name .. ": " .. message)
     end)
@@ -3390,7 +3393,7 @@ pcall(RefreshToolViewer)
 local SavedConfigs = {}
 local Unloaded = false
 
-local function CaptureConfig()
+function CaptureConfig()
     local cfg = { Keybinds = {}, Sliders = {}, Features = {}, AimTargetPart = State.AimTargetPart, ProtectedPlayers = {} }
     for userId, enabled in pairs(State.ProtectedPlayers) do
         cfg.ProtectedPlayers[userId] = enabled
@@ -3401,7 +3404,7 @@ local function CaptureConfig()
     return cfg
 end
 
-local function ApplyConfig(cfg)
+function ApplyConfig(cfg)
     if not cfg then return end
     for k, v in pairs(cfg.Keybinds or {}) do
         CONFIG.Keybinds[k] = v
@@ -3427,7 +3430,7 @@ local function ApplyConfig(cfg)
     RefreshToolViewer()
 end
 
-local function UnloadMenu()
+function UnloadMenu()
     if Unloaded then return end
     Unloaded = true
     pcall(function() RunService:UnbindFromRenderStep("CheatMenuAimAssist") end)
@@ -3500,27 +3503,26 @@ do
 end
 
 local KeyGateBusy = false
-local OpenMenu
 
 KeyGate.SourceURL = "https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt"
 KeyGate.ValidKeys = {
     BRAVOONTOP = true,
 }
 
-local function SetKeyGateVisible(visible)
+function SetKeyGateVisible(visible)
     if KeyGate.Gui then
         KeyGate.Gui.Enabled = visible
     end
 end
 
-local function AuthorizeAndOpen()
+function AuthorizeAndOpen()
     State.KeyAuthorized = true
     _G.__BravoHackKeyAuthorized = true
     SetKeyGateVisible(false)
     OpenMenu()
 end
 
-local function StartKeyGate()
+function StartKeyGate()
     if _G.__BravoHackKeyAuthorized then
         AuthorizeAndOpen()
         return
@@ -3537,7 +3539,7 @@ local function StartKeyGate()
     end)
 end
 
-local function SubmitKey()
+function SubmitKey()
     if KeyGateBusy then return end
 
     local key = tostring(KeyGate.Input.Text or ""):gsub("^%s+", ""):gsub("%s+$", ""):upper()
@@ -3580,7 +3582,7 @@ KeyGate.Input.FocusLost:Connect(function(enterPressed)
     if enterPressed then SubmitKey() end
 end)
 
-OpenMenu = function()
+function OpenMenu()
     if Unloaded or not State.KeyAuthorized then return end
 
     if not PlayerGui or not PlayerGui.Parent then
@@ -3611,7 +3613,7 @@ OpenMenu = function()
     StatusLabel.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name
 end
 
-local function CloseMenu()
+function CloseMenu()
     if not State.MenuOpen then
         if MainFrame then MainFrame.Visible = false end
         return
@@ -3624,7 +3626,7 @@ local function CloseMenu()
     StatusLabel.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name
 end
 
-local function ToggleMenu()
+function ToggleMenu()
     if not State.KeyAuthorized then return end
     if State.MenuOpen then CloseMenu() else OpenMenu() end
 end
@@ -3633,7 +3635,7 @@ CloseButton.MouseEnter:Connect(function() Tween(CloseButton, TI_FAST, { Backgrou
 CloseButton.MouseLeave:Connect(function() Tween(CloseButton, TI_FAST, { BackgroundColor3 = Color3.fromRGB(40, 40, 48) }) end)
 CloseButton.MouseButton1Click:Connect(CloseMenu)
 
-local function BindMenuToggle()
+function BindMenuToggle()
     pcall(function()
         ContextActionService:UnbindAction("BravoHack_MenuToggle")
     end)
@@ -3979,7 +3981,7 @@ Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
     end
 end)
 
-local function OnCharacterAdded(char)
+function OnCharacterAdded(char)
     task.wait(0.1)
     ApplyMovementSettings()
     if State.Features.GodMode then
