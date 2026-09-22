@@ -310,34 +310,6 @@ local MainFrame, StatusLabel
 local SubmitKey, DirectOpenMenu
 local KeyGateBusy = false
 
-local function TrySubmitKey()
-    if SubmitKey then
-        SubmitKey()
-    else
-        KeyGate.Status.Text = "Please wait..."
-        KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
-    end
-end
-
-KeyGate.Button.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        TrySubmitKey()
-    end
-end)
-KeyGate.Button.MouseButton1Click:Connect(TrySubmitKey)
-KeyGate.Button.Activated:Connect(TrySubmitKey)
-KeyGate.Input.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        TrySubmitKey()
-    end
-end)
-UserInputService.InputBegan:Connect(function(input)
-    if UserInputService:GetFocusedTextBox() ~= KeyGate.Input then return end
-    if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
-        TrySubmitKey()
-    end
-end)
-
 KeyGate.GetKeyButton.MouseButton1Click:Connect(function()
     pcall(function()
         game:GetService("GuiService"):OpenBrowserWindow("https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt")
@@ -3680,6 +3652,18 @@ SubmitKey = function()
     end
 end
 
+KeyGate.Button.Activated:Connect(SubmitKey)
+KeyGate.Input.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        SubmitKey()
+    end
+end)
+UserInputService.InputBegan:Connect(function(input)
+    if UserInputService:GetFocusedTextBox() ~= KeyGate.Input then return end
+    if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
+        SubmitKey()
+    end
+end)
 
 OpenMenu = function()
     if Unloaded or not State.KeyAuthorized then return end
