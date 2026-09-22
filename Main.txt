@@ -310,17 +310,6 @@ local MainFrame, StatusLabel
 local SubmitKey, DirectOpenMenu
 local KeyGateBusy = false
 
-KeyGate.GetKeyButton.MouseButton1Click:Connect(function()
-    pcall(function()
-        game:GetService("GuiService"):OpenBrowserWindow("https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt")
-    end)
-end)
-KeyGate.GetKeyButton.Activated:Connect(function()
-    pcall(function()
-        game:GetService("GuiService"):OpenBrowserWindow("https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt")
-    end)
-end)
-
 MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -3518,9 +3507,6 @@ local function UnloadMenu()
     pcall(function() DisableForceField() end)
 end
 
-KeyGate.UninjectButton.MouseButton1Click:Connect(UnloadMenu)
-KeyGate.UninjectButton.Activated:Connect(UnloadMenu)
-
 do
     local page = Pages.Settings
     CreateSectionLabel(page, "Algemeen", 1)
@@ -3612,18 +3598,14 @@ local function StartKeyGate()
     SetKeyGateVisible(true)
     KeyGate.Status.Text = "Enter your access key."
     KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
-    task.defer(function()
-        pcall(function()
-            KeyGate.Input:CaptureFocus()
-        end)
-    end)
+    KeyGate.Input.Text = ""
 end
 
 SubmitKey = function()
-    if KeyGateBusy or State.KeyAuthorized then return end
+    if KeyGateBusy or State.KeyAuthorized or Unloaded then return end
 
     local key = tostring(KeyGate.Input.Text or "")
-    key = key:gsub("[%c%s]", ""):upper()
+    key = key:gsub("%s+", ""):upper()
 
     if key == "" then
         KeyGate.Status.Text = "Enter a key first."
@@ -3631,28 +3613,35 @@ SubmitKey = function()
         return
     end
 
-    KeyGateBusy = true
-    KeyGate.Button.Text = "Checking..."
-    KeyGate.Status.Text = "Validating key..."
-    KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
-
-    local valid = KeyGate.ValidKeys[key] == true
-
-    if valid then
-        KeyGate.Status.Text = "Access granted."
-        KeyGate.Status.TextColor3 = CONFIG.Colors.Green
-        KeyGateBusy = false
-        KeyGate.Button.Text = "Unlocked"
-        task.defer(AuthorizeAndOpen)
-    else
-        KeyGateBusy = false
-        KeyGate.Button.Text = "Unlock"
+    local valid = (KeyGate.ValidKeys[key] == true)
+    if not valid then
         KeyGate.Status.Text = "Invalid key."
         KeyGate.Status.TextColor3 = CONFIG.Colors.Red
+        return
     end
+
+    KeyGateBusy = true
+    KeyGate.Status.Text = "Access granted."
+    KeyGate.Status.TextColor3 = CONFIG.Colors.Green
+    KeyGate.Button.Text = "Unlocked"
+    State.KeyAuthorized = true
+    _G.__BravoHackKeyAuthorized = true
+
+    task.defer(function()
+        KeyGateBusy = false
+        DirectOpenMenu()
+    end)
 end
 
-KeyGate.Button.Activated:Connect(SubmitKey)
+-- Key input handlers
+KeyGate.Button.Activated:Connect(function()
+    SubmitKey()
+end)
+KeyGate.Button.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        SubmitKey()
+    end
+end)
 KeyGate.Input.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         SubmitKey()
@@ -3664,6 +3653,34 @@ UserInputService.InputBegan:Connect(function(input)
         SubmitKey()
     end
 end)
+
+-- Get Key
+local function OpenKeyPage()
+    local ok = pcall(function()
+        game:GetService("GuiService"):OpenBrowserWindow(KeyGate.SourceURL)
+    end)
+    if not ok then
+        KeyGate.Status.Text = "Key page: " .. KeyGate.SourceURL
+        KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
+    end
+end
+KeyGate.GetKeyButton.Activated:Connect(OpenKeyPage)
+
+-- Key-screen uninject
+KeyGate.UninjectButton.Activated:Connect(function()
+    if UnloadMenu then
+        UnloadMenu()
+    else
+        Unloaded = true
+        pcall(function() ContextActionService:UnbindAction("BravoHack_MenuToggle") end)
+        pcall(function() RunService:UnbindFromRenderStep("CheatMenuAimAssist") end)
+        pcall(function() RunService:UnbindFromRenderStep("DeveloperFreecam") end)
+        pcall(function() KeyGate.Gui:Destroy() end)
+        pcall(function() ScreenGui:Destroy() end)
+        pcall(function() Overlay:Destroy() end)
+    end
+end)
+
 
 OpenMenu = function()
     if Unloaded or not State.KeyAuthorized then return end
