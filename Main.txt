@@ -165,6 +165,8 @@ function GetHumanoid()
     return char and char:FindFirstChildOfClass("Humanoid")
 end
 
+local MainFrame, StatusLabel
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CheatMenuGUI"
 ScreenGui.ResetOnSpawn = false
@@ -306,8 +308,7 @@ KeyGate.Status.Text = "Enter your access key."
 KeyGate.Status.ZIndex = 101
 KeyGate.Status.Parent = KeyGate.Frame
 
-local MainFrame, StatusLabel
-local SubmitKey, DirectOpenMenu
+local SubmitKey
 local KeyGateBusy = false
 
 MainFrame = Instance.new("Frame")
@@ -487,6 +488,208 @@ ProfileName.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name
 ProfileName.Parent = StatusBar
 
 StatusLabel = ProfileName
+
+KeyGate.SourceURL = "https://raw.githubusercontent.com/BravoBuilds/BravoHack/refs/heads/main/Keys.txt"
+KeyGate.ValidKeys = { BRAVOONTOP = true }
+KeyGate.KeysLoaded = false
+
+local function SetKeyGateVisible(visible)
+    if KeyGate.Gui and KeyGate.Gui.Parent then
+        KeyGate.Gui.Enabled = visible
+        if visible then
+            KeyGate.Gui.DisplayOrder = 20000
+            KeyGate.Frame.Visible = true
+        end
+    end
+end
+
+local function LoadKeysFromURL()
+    local body
+    local ok = pcall(function()
+        body = game:HttpGet(KeyGate.SourceURL, true)
+    end)
+
+    if not ok or type(body) ~= "string" or body == "" then
+        local requestFn
+        if type(request) == "function" then
+            requestFn = request
+        elseif type(http_request) == "function" then
+            requestFn = http_request
+        elseif type(syn) == "table" and type(syn.request) == "function" then
+            requestFn = syn.request
+        end
+        if requestFn then
+            local requestOk, response = pcall(function()
+                return requestFn({
+                    Url = KeyGate.SourceURL,
+                    Method = "GET",
+                })
+            end)
+            if requestOk and type(response) == "table" then
+                body = response.Body
+            end
+        end
+    end
+
+    if type(body) == "string" and body ~= "" then
+        local loaded = {}
+        local found = 0
+        for line in body:gmatch("[^\r\n]+") do
+            local key = line:gsub("%s+", "")
+            if key ~= "" and not key:match("^#") then
+                loaded[key:upper()] = true
+                found += 1
+            end
+        end
+        if found > 0 then
+            KeyGate.ValidKeys = loaded
+            KeyGate.KeysLoaded = true
+            return true
+        end
+    end
+
+    KeyGate.ValidKeys = { BRAVOONTOP = true }
+    KeyGate.KeysLoaded = false
+    return false
+end
+
+local function OpenAuthorizedMenu()
+    if _G.__BravoHackUnloaded then return end
+    State.KeyAuthorized = true
+    State.MenuOpen = true
+    _G.__BravoHackKeyAuthorized = true
+
+    if ScreenGui and ScreenGui.Parent ~= PlayerGui then
+        ScreenGui.Parent = PlayerGui
+    end
+    if Overlay and Overlay.Parent ~= PlayerGui then
+        Overlay.Parent = PlayerGui
+    end
+    if ScreenGui then
+        ScreenGui.Enabled = true
+        ScreenGui.DisplayOrder = 10000
+    end
+    if Overlay then
+        Overlay.Enabled = true
+        Overlay.DisplayOrder = 9999
+    end
+    if MainFrame and MainFrame.Parent then
+        MainFrame.Visible = true
+        MainFrame.Size = CONFIG.Sizes.Window
+    end
+    if StatusLabel then
+        StatusLabel.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name
+    end
+    SetKeyGateVisible(false)
+end
+
+SubmitKey = function()
+    if KeyGateBusy or State.KeyAuthorized or _G.__BravoHackUnloaded then return end
+
+    local key = tostring(KeyGate.Input.Text or "")
+    key = key:gsub("%s+", ""):upper()
+
+    if key == "" then
+        KeyGate.Status.Text = "Enter a key first."
+        KeyGate.Status.TextColor3 = CONFIG.Colors.Red
+        return
+    end
+
+    if not KeyGate.KeysLoaded and not KeyGate.ValidKeys[key] then
+        KeyGate.Status.Text = "Keys are still loading..."
+        KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
+        return
+    end
+
+    KeyGateBusy = true
+    local valid = KeyGate.ValidKeys[key] == true
+    KeyGateBusy = false
+
+    if not valid then
+        KeyGate.Status.Text = "Invalid key."
+        KeyGate.Status.TextColor3 = CONFIG.Colors.Red
+        return
+    end
+
+    KeyGate.Status.Text = "Access granted."
+    KeyGate.Status.TextColor3 = CONFIG.Colors.Green
+    KeyGate.Button.Text = "Unlocked"
+    OpenAuthorizedMenu()
+end
+
+KeyGate.Button.MouseButton1Click:Connect(SubmitKey)
+KeyGate.Input.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        SubmitKey()
+    end
+end)
+
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode ~= Enum.KeyCode.Return and input.KeyCode ~= Enum.KeyCode.KeypadEnter then
+        return
+    end
+    if KeyGate.Input:IsFocused() then
+        SubmitKey()
+    end
+end)
+
+local function CopyKeyLink()
+    local copied = false
+    local function tryClipboard(fn)
+        if type(fn) ~= "function" then return end
+        local ok = pcall(fn, KeyGate.SourceURL)
+        if ok then copied = true end
+    end
+
+    tryClipboard(setclipboard)
+    if not copied then tryClipboard(toclipboard) end
+    if not copied then tryClipboard(set_clipboard) end
+    if not copied then tryClipboard(writeclipboard) end
+
+    if copied then
+        KeyGate.Status.Text = "Key link copied to clipboard."
+        KeyGate.Status.TextColor3 = CONFIG.Colors.Green
+    else
+        KeyGate.Status.Text = KeyGate.SourceURL
+        KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
+    end
+end
+
+KeyGate.GetKeyButton.MouseButton1Click:Connect(CopyKeyLink)
+
+local function DestroyBravoGuis()
+    local names = {
+        CheatMenuGUI = true,
+        CheatMenuOverlay = true,
+        BravoHackKeyGate = true,
+        DeveloperColorPicker = true,
+        DeveloperNotifications = true,
+        DeveloperToolViewer = true,
+        DeveloperPlayerList = true,
+        DeveloperChatLog = true,
+        DeveloperInventoryView = true,
+    }
+
+    for _, child in ipairs(PlayerGui:GetChildren()) do
+        if child:IsA("ScreenGui") and names[child.Name] then
+            pcall(function() child:Destroy() end)
+        end
+    end
+end
+
+KeyGate.UninjectButton.MouseButton1Click:Connect(function()
+    if _G.__BravoHackUnloaded then return end
+    _G.__BravoHackUnloaded = true
+    State.KeyAuthorized = false
+    State.MenuOpen = false
+    pcall(function() ContextActionService:UnbindAction("BravoHack_MenuToggle") end)
+    pcall(function() RunService:UnbindFromRenderStep("CheatMenuAimAssist") end)
+    DestroyBravoGuis()
+end)
+
+task.spawn(function()
+    LoadKeysFromURL()
+end)
 
 task.spawn(function()
     local ok, image = pcall(function()
@@ -924,9 +1127,12 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
 
     local hitButton = Instance.new("TextButton")
     hitButton.BackgroundTransparency = 1
+    hitButton.BorderSizePixel = 0
     hitButton.Text = ""
-    hitButton.Size = UDim2.new(1, -(reserved+4), 1, 0)
+    hitButton.Size = UDim2.new(1, 0, 1, 0)
     hitButton.ZIndex = 2
+    hitButton.Active = true
+    hitButton.AutoButtonColor = false
     hitButton.Parent = row
 
     local state = default
@@ -991,6 +1197,7 @@ local function CreateSlider(parent, text, min, max, default, order, callback, de
     valueLabel.Parent = row
 
     local track = Instance.new("Frame")
+    track.Active = true
     track.Size = UDim2.new(1, -24, 0, 6)
     track.Position = UDim2.new(0, 12, 1, -16)
     track.BackgroundColor3 = Color3.fromRGB(55, 55, 63)
@@ -1369,7 +1576,7 @@ local function CreateSkeletonForCharacter(char)
     end
 
     headMarker = Instance.new("Frame")
-    headMarker.Name = "DeveloperSkeletonononononononononononononononononHead"
+    headMarker.Name = "DeveloperSkeletonHead"
     headMarker.AnchorPoint = Vector2.new(0.5, 0.5)
     headMarker.Size = UDim2.fromOffset(10, 10)
     headMarker.BackgroundColor3 = CONFIG.Colors.Skeleton
@@ -1381,7 +1588,7 @@ local function CreateSkeletonForCharacter(char)
 
     for _, pair in ipairs(pairsToUse) do
         local glow = Instance.new("Frame")
-        glow.Name = "DeveloperSkeletonononononononononononononononononGlow"
+        glow.Name = "DeveloperSkeletonGlow"
         glow.AnchorPoint = Vector2.new(0.5, 0.5)
         glow.BorderSizePixel = 0
         glow.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
@@ -1392,7 +1599,7 @@ local function CreateSkeletonForCharacter(char)
         glow.Parent = Overlay
 
         local frame = Instance.new("Frame")
-        frame.Name = "DeveloperSkeletonononononononononononononononononLine"
+        frame.Name = "DeveloperSkeletonLine"
         frame.AnchorPoint = Vector2.new(0.5, 0.5)
         frame.BorderSizePixel = 0
         frame.BackgroundColor3 = CONFIG.Colors.Skeleton
@@ -1406,7 +1613,7 @@ local function CreateSkeletonForCharacter(char)
     for name in pairs(jointNames) do
         if name ~= "Head" then
             local dot = Instance.new("Frame")
-            dot.Name = "DeveloperSkeletonononononononononononononononononJoint"
+            dot.Name = "DeveloperSkeletonJoint"
             dot.AnchorPoint = Vector2.new(0.5, 0.5)
             dot.Size = UDim2.fromOffset(6, 6)
             dot.BackgroundColor3 = CONFIG.Colors.Skeleton
@@ -2938,7 +3145,7 @@ do
         State.Features.Healthbar = v
         RefreshTracking()
     end, "Healthbar", "HealthGood")
-    CreateToggle(page, "Skeletononononononononononononononononon ESP (R6 + R15)", false, 5, function(v)
+    CreateToggle(page, "Skeleton ESP (R6 + R15)", false, 5, function(v)
         State.Features.SkeletonESP = v
         RefreshTracking()
         for plr, objs in pairs(State.ESPObjects) do
@@ -2951,7 +3158,7 @@ do
                 end
             end
         end
-    end, "SkeletonononononononononononononononononESP", "Skeletononononononononononononononononon")
+    end, "SkeletonESP", "Skeleton")
     CreateToggle(page, "Chams (visible through walls)", false, 6, function(v)
         State.Features.Chams = v
         RefreshTracking()
@@ -3554,133 +3761,6 @@ end
 
 local OpenMenu
 
-KeyGate.SourceURL = "https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt"
-KeyGate.ValidKeys = {
-    BRAVOONTOP = true,
-}
-
-local function SetKeyGateVisible(visible)
-    if KeyGate.Gui and KeyGate.Gui.Parent then
-        KeyGate.Gui.Enabled = visible
-        if visible then
-            KeyGate.Gui.DisplayOrder = 20000
-        end
-    end
-end
-
-DirectOpenMenu = function()
-    if Unloaded then return end
-    State.KeyAuthorized = true
-    State.MenuOpen = true
-    if ScreenGui and ScreenGui.Parent ~= PlayerGui then
-        ScreenGui.Parent = PlayerGui
-    end
-    ScreenGui.Enabled = true
-    ScreenGui.DisplayOrder = 10000
-    MainFrame.Visible = true
-    MainFrame.Size = CONFIG.Sizes.Window
-    if StatusLabel then
-        StatusLabel.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name
-    end
-    SetKeyGateVisible(false)
-end
-
-local function AuthorizeAndOpen()
-    State.KeyAuthorized = true
-    _G.__BravoHackKeyAuthorized = true
-    DirectOpenMenu()
-end
-
-local function StartKeyGate()
-    State.KeyAuthorized = false
-    State.MenuOpen = false
-    MainFrame.Visible = false
-    SetKeyGateVisible(true)
-    KeyGate.Status.Text = "Enter your access key."
-    KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
-    KeyGate.Input.Text = ""
-end
-
-SubmitKey = function()
-    if KeyGateBusy or State.KeyAuthorized or Unloaded then return end
-
-    local key = tostring(KeyGate.Input.Text or "")
-    key = key:gsub("%s+", ""):upper()
-
-    if key == "" then
-        KeyGate.Status.Text = "Enter a key first."
-        KeyGate.Status.TextColor3 = CONFIG.Colors.Red
-        return
-    end
-
-    local valid = (KeyGate.ValidKeys[key] == true)
-    if not valid then
-        KeyGate.Status.Text = "Invalid key."
-        KeyGate.Status.TextColor3 = CONFIG.Colors.Red
-        return
-    end
-
-    KeyGateBusy = true
-    KeyGate.Status.Text = "Access granted."
-    KeyGate.Status.TextColor3 = CONFIG.Colors.Green
-    KeyGate.Button.Text = "Unlocked"
-    State.KeyAuthorized = true
-    _G.__BravoHackKeyAuthorized = true
-
-    task.defer(function()
-        KeyGateBusy = false
-        DirectOpenMenu()
-    end)
-end
-
--- Key input handlers
-KeyGate.Button.Activated:Connect(function()
-    SubmitKey()
-end)
-KeyGate.Button.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        SubmitKey()
-    end
-end)
-KeyGate.Input.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        SubmitKey()
-    end
-end)
-UserInputService.InputBegan:Connect(function(input)
-    if UserInputService:GetFocusedTextBox() ~= KeyGate.Input then return end
-    if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
-        SubmitKey()
-    end
-end)
-
--- Get Key
-local function OpenKeyPage()
-    local ok = pcall(function()
-        game:GetService("GuiService"):OpenBrowserWindow(KeyGate.SourceURL)
-    end)
-    if not ok then
-        KeyGate.Status.Text = "Key page: " .. KeyGate.SourceURL
-        KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
-    end
-end
-KeyGate.GetKeyButton.Activated:Connect(OpenKeyPage)
-
--- Key-screen uninject
-KeyGate.UninjectButton.Activated:Connect(function()
-    if UnloadMenu then
-        UnloadMenu()
-    else
-        Unloaded = true
-        pcall(function() ContextActionService:UnbindAction("BravoHack_MenuToggle") end)
-        pcall(function() RunService:UnbindFromRenderStep("CheatMenuAimAssist") end)
-        pcall(function() RunService:UnbindFromRenderStep("DeveloperFreecam") end)
-        pcall(function() KeyGate.Gui:Destroy() end)
-        pcall(function() ScreenGui:Destroy() end)
-        pcall(function() Overlay:Destroy() end)
-    end
-end)
-
 
 OpenMenu = function()
     if Unloaded or not State.KeyAuthorized then return end
@@ -3748,11 +3828,14 @@ local function BindMenuToggle()
 end
 
 BindMenuToggle()
-StartKeyGate()
+State.KeyAuthorized = false
+State.MenuOpen = false
+MainFrame.Visible = false
 SetKeyGateVisible(true)
 KeyGate.Frame.Visible = true
 
 task.defer(function()
+    pcall(function() KeyGate.Input:CaptureFocus() end)
     State.CurrentTab = categories[1]
     for tabName, page in pairs(Pages) do
         page.Visible = (tabName == State.CurrentTab)
@@ -4114,181 +4197,3 @@ if LocalPlayer.Character then
 end
 
 print("[BravoHack] Loaded. Press "..CONFIG.Keybinds.ToggleMenu.Name.." om het menu te openen.")
-
-pcall(function()
-    if KeyGate and KeyGate.Gui then
-        KeyGate.Gui:Destroy()
-    end
-end)
-
-local FinalKeyGui = Instance.new("ScreenGui")
-FinalKeyGui.Name = "BravoHackKeySystemFinal"
-FinalKeyGui.ResetOnSpawn = false
-FinalKeyGui.IgnoreGuiInset = true
-FinalKeyGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-FinalKeyGui.DisplayOrder = 2147483647
-FinalKeyGui.Parent = PlayerGui
-
-local FinalKeyFrame = Instance.new("Frame")
-FinalKeyFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-FinalKeyFrame.Position = UDim2.fromScale(0.5, 0.5)
-FinalKeyFrame.Size = UDim2.fromOffset(420, 285)
-FinalKeyFrame.BackgroundColor3 = CONFIG.Colors.Background
-FinalKeyFrame.BorderSizePixel = 0
-FinalKeyFrame.Active = true
-FinalKeyFrame.ZIndex = 1000
-FinalKeyFrame.Parent = FinalKeyGui
-NewCorner(8, FinalKeyFrame)
-NewStroke(FinalKeyFrame, CONFIG.Colors.Stroke, 1, 0.1)
-
-local FinalTitle = Instance.new("TextLabel")
-FinalTitle.BackgroundTransparency = 1
-FinalTitle.Position = UDim2.fromOffset(20, 16)
-FinalTitle.Size = UDim2.new(1, -40, 0, 30)
-FinalTitle.Font = Enum.Font.GothamBold
-FinalTitle.TextSize = 22
-FinalTitle.TextColor3 = CONFIG.Colors.Text
-FinalTitle.Text = "BravoHack"
-FinalTitle.ZIndex = 1001
-FinalTitle.Parent = FinalKeyFrame
-
-local FinalSubtitle = Instance.new("TextLabel")
-FinalSubtitle.BackgroundTransparency = 1
-FinalSubtitle.Position = UDim2.fromOffset(20, 48)
-FinalSubtitle.Size = UDim2.new(1, -40, 0, 34)
-FinalSubtitle.Font = Enum.Font.Gotham
-FinalSubtitle.TextSize = 12
-FinalSubtitle.TextColor3 = CONFIG.Colors.SubText
-FinalSubtitle.Text = "Enter your access key to continue."
-FinalSubtitle.ZIndex = 1001
-FinalSubtitle.Parent = FinalKeyFrame
-
-local FinalInput = Instance.new("TextBox")
-FinalInput.Size = UDim2.new(1, -40, 0, 42)
-FinalInput.Position = UDim2.fromOffset(20, 88)
-FinalInput.BackgroundColor3 = CONFIG.Colors.Panel
-FinalInput.BorderSizePixel = 0
-FinalInput.ClearTextOnFocus = false
-FinalInput.PlaceholderText = "Access key"
-FinalInput.Text = ""
-FinalInput.Font = Enum.Font.Gotham
-FinalInput.TextSize = 13
-FinalInput.TextColor3 = CONFIG.Colors.Text
-FinalInput.PlaceholderColor3 = CONFIG.Colors.SubText
-FinalInput.TextXAlignment = Enum.TextXAlignment.Left
-FinalInput.Active = true
-FinalInput.TextEditable = true
-FinalInput.ZIndex = 1002
-FinalInput.Parent = FinalKeyFrame
-NewCorner(6, FinalInput)
-NewStroke(FinalInput, CONFIG.Colors.Stroke, 1, 0.2)
-
-local FinalUnlock = Instance.new("TextButton")
-FinalUnlock.Size = UDim2.new(1, -40, 0, 40)
-FinalUnlock.Position = UDim2.fromOffset(20, 140)
-FinalUnlock.BackgroundColor3 = CONFIG.Colors.Accent
-FinalUnlock.BorderSizePixel = 0
-FinalUnlock.AutoButtonColor = false
-FinalUnlock.Active = true
-FinalUnlock.Selectable = true
-FinalUnlock.Font = Enum.Font.GothamBold
-FinalUnlock.TextSize = 13
-FinalUnlock.TextColor3 = Color3.fromRGB(255, 255, 255)
-FinalUnlock.Text = "Unlock"
-FinalUnlock.ZIndex = 1002
-FinalUnlock.Parent = FinalKeyFrame
-NewCorner(6, FinalUnlock)
-
-local FinalGetKey = Instance.new("TextButton")
-FinalGetKey.Size = UDim2.new(0.5, -25, 0, 36)
-FinalGetKey.Position = UDim2.fromOffset(20, 190)
-FinalGetKey.BackgroundColor3 = CONFIG.Colors.Panel
-FinalGetKey.BorderSizePixel = 0
-FinalGetKey.AutoButtonColor = false
-FinalGetKey.Active = true
-FinalGetKey.Selectable = true
-FinalGetKey.Font = Enum.Font.GothamBold
-FinalGetKey.TextSize = 12
-FinalGetKey.TextColor3 = CONFIG.Colors.Text
-FinalGetKey.Text = "Get Key"
-FinalGetKey.ZIndex = 1002
-FinalGetKey.Parent = FinalKeyFrame
-NewCorner(6, FinalGetKey)
-NewStroke(FinalGetKey, CONFIG.Colors.Stroke, 1, 0.2)
-
-local FinalUninject = Instance.new("TextButton")
-FinalUninject.Size = UDim2.new(0.5, -25, 0, 36)
-FinalUninject.Position = UDim2.new(0.5, 5, 0, 190)
-FinalUninject.BackgroundColor3 = Color3.fromRGB(55, 35, 38)
-FinalUninject.BorderSizePixel = 0
-FinalUninject.AutoButtonColor = false
-FinalUninject.Active = true
-FinalUninject.Selectable = true
-FinalUninject.Font = Enum.Font.GothamBold
-FinalUninject.TextSize = 12
-FinalUninject.TextColor3 = CONFIG.Colors.Text
-FinalUninject.Text = "Uninject"
-FinalUninject.ZIndex = 1002
-FinalUninject.Parent = FinalKeyFrame
-NewCorner(6, FinalUninject)
-NewStroke(FinalUninject, CONFIG.Colors.Stroke, 1, 0.2)
-
-local FinalStatus = Instance.new("TextLabel")
-FinalStatus.BackgroundTransparency = 1
-FinalStatus.Position = UDim2.fromOffset(20, 236)
-FinalStatus.Size = UDim2.new(1, -40, 0, 28)
-FinalStatus.Font = Enum.Font.Gotham
-FinalStatus.TextSize = 11
-FinalStatus.TextColor3 = CONFIG.Colors.SubText
-FinalStatus.Text = "Enter your key and press Unlock."
-FinalStatus.ZIndex = 1001
-FinalStatus.Parent = FinalKeyFrame
-
-local function FinalUnlockMenu()
-    local key = tostring(FinalInput.Text or ""):gsub("%s+", ""):upper()
-    if key == "BRAVOONTOP" then
-        State.KeyAuthorized = true
-        _G.__BravoHackKeyAuthorized = true
-        FinalStatus.Text = "Access granted."
-        FinalStatus.TextColor3 = CONFIG.Colors.Green
-        FinalKeyGui.Enabled = false
-        if DirectOpenMenu then
-            DirectOpenMenu()
-        else
-            MainFrame.Visible = true
-            State.MenuOpen = true
-        end
-    else
-        FinalStatus.Text = "Invalid key."
-        FinalStatus.TextColor3 = CONFIG.Colors.Red
-    end
-end
-
-FinalUnlock.Activated:Connect(FinalUnlockMenu)
-FinalInput.FocusLost:Connect(function(enterPressed)
-    if enterPressed then
-        FinalUnlockMenu()
-    end
-end)
-
-FinalGetKey.Activated:Connect(function()
-    local ok = pcall(function()
-        game:GetService("GuiService"):OpenBrowserWindow("https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt")
-    end)
-    if not ok then
-        FinalStatus.Text = "Key: BRAVOONTOP"
-        FinalStatus.TextColor3 = CONFIG.Colors.SubText
-    end
-end)
-
-FinalUninject.Activated:Connect(function()
-    pcall(function()
-        UnloadMenu()
-    end)
-    pcall(function() ContextActionService:UnbindAction("BravoHack_MenuToggle") end)
-    pcall(function() FinalKeyGui:Destroy() end)
-end)
-
-task.defer(function()
-    pcall(function() FinalInput:CaptureFocus() end)
-end)
