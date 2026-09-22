@@ -3543,7 +3543,8 @@ end
 local function SubmitKey()
     if KeyGateBusy then return end
 
-    local key = tostring(KeyGate.Input.Text or ""):gsub("^%s+", ""):gsub("%s+$", ""):upper()
+    local key = tostring(KeyGate.Input.Text or "")
+key = key:gsub("%s+", ""):upper()
     if key == "" then
         KeyGate.Status.Text = "Enter a key first."
         KeyGate.Status.TextColor3 = CONFIG.Colors.Red
@@ -3572,15 +3573,30 @@ local function SubmitKey()
     end
 end
 
+KeyGate.Button.Active = true
+KeyGate.Button.Selectable = true
+KeyGate.Button.ZIndex = 50
+KeyGate.Input.Active = true
+KeyGate.Input.Selectable = true
+KeyGate.Input.ZIndex = 50
+KeyGate.Status.ZIndex = 50
+KeyGate.Button.Activated:Connect(SubmitKey)
 KeyGate.Button.MouseEnter:Connect(function()
     Tween(KeyGate.Button, TI_FAST, {BackgroundColor3 = CONFIG.Colors.AccentHover})
 end)
 KeyGate.Button.MouseLeave:Connect(function()
     Tween(KeyGate.Button, TI_FAST, {BackgroundColor3 = CONFIG.Colors.Accent})
 end)
-KeyGate.Button.MouseButton1Click:Connect(SubmitKey)
 KeyGate.Input.FocusLost:Connect(function(enterPressed)
     if enterPressed then SubmitKey() end
+end)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
+        if UserInputService:GetFocusedTextBox() == KeyGate.Input then
+            SubmitKey()
+        end
+    end
 end)
 
 OpenMenu = function()
