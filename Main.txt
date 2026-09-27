@@ -140,7 +140,6 @@ local EnableFly, DisableFly
 local EnableGodMode, DisableGodMode
 local EnableFreecam, DisableFreecam
 local ApplyMovementSettings, ApplyFullbright, ApplyRemoveFog
-local LoadDex
 
 local TI_FAST = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local TI_MED  = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -2581,9 +2580,8 @@ local function CreateAimTargetDropdown(parent)
     return row
 end
 
-local TriggerbotTargetDropdownRef
 
-local function CreateTriggerbotTargetDropdown(parent)
+function CreateTriggerbotTargetDropdown(parent)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 66)
     row.BackgroundColor3 = CONFIG.Colors.Panel
@@ -2712,17 +2710,16 @@ local function CreateTriggerbotTargetDropdown(parent)
         setOpen(not open)
     end)
 
-    TriggerbotTargetDropdownRef = { Button = dropdown, Menu = menu, SetOpen = setOpen }
     return row
 end
 
-local function GetAimTargetPart(char, targetName)
+function GetAimTargetPart(char, targetName)
     targetName = targetName or State.AimTargetPart
     if not char or not targetName then return nil end
     return char:FindFirstChild(targetName)
 end
 
-local function AimTargetVisible(targetPart, useWallCheck)
+function AimTargetVisible(targetPart, useWallCheck)
     if not targetPart or not Camera then return false end
     if useWallCheck == nil then useWallCheck = State.Features.WallCheck end
     if not useWallCheck then return true end
@@ -4111,7 +4108,7 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
     end
 end)
 
-local function PerformTriggerClick()
+function PerformTriggerClick()
     if typeof(mouse1click) == "function" then
         local ok = pcall(mouse1click)
         if ok then return true end
