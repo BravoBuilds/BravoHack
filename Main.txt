@@ -1,3 +1,4 @@
+
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
 local UserInputService   = game:GetService("UserInputService")
@@ -105,7 +106,7 @@ local State = {
     Connections = {},
     ESPObjects = {},
     SelectedPlayer = nil,
-    AimTargetPart = nil,
+    AimTargetPart = "Head",
     TriggerbotTargetPart = "Head",
     PlayerActionExpanded = nil,
     ProtectedPlayers = {},
@@ -192,7 +193,7 @@ KeyGate.Gui = Instance.new("ScreenGui")
 KeyGate.Gui.Name = "BravoHackKeyGate"
 KeyGate.Gui.ResetOnSpawn = false
 KeyGate.Gui.IgnoreGuiInset = true
-KeyGate.Gui.DisplayOrder = 20000
+KeyGate.Gui.DisplayOrder = 99999
 KeyGate.Gui.Parent = PlayerGui
 KeyGate.Gui.Enabled = true
 KeyGate.Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
@@ -503,7 +504,7 @@ local function SetKeyGateVisible(visible)
     if KeyGate.Gui and KeyGate.Gui.Parent then
         KeyGate.Gui.Enabled = visible
         if visible then
-            KeyGate.Gui.DisplayOrder = 20000
+            KeyGate.Gui.DisplayOrder = 99999
             KeyGate.Frame.Visible = true
         end
     end
@@ -589,8 +590,10 @@ local function OpenAuthorizedMenu()
     SetKeyGateVisible(false)
 end
 
+KeyGate.InteractionBusy = false
+
 SubmitKey = function()
-    if KeyGateBusy or State.KeyAuthorized or _G.__BravoHackUnloaded then return end
+    if KeyGate.InteractionBusy or State.KeyAuthorized or _G.__BravoHackUnloaded then return end
 
     local key = tostring(KeyGate.Input.Text or "")
     key = key:gsub("%s+", ""):upper()
@@ -598,21 +601,28 @@ SubmitKey = function()
     if key == "" then
         KeyGate.Status.Text = "Enter a key first."
         KeyGate.Status.TextColor3 = CONFIG.Colors.Red
+        pcall(function() KeyGate.Input:CaptureFocus() end)
         return
     end
 
-    if not KeyGate.KeysLoaded and not KeyGate.ValidKeys[key] then
-        KeyGate.Status.Text = "Keys are still loading..."
-        KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
-        return
+    KeyGate.InteractionBusy = true
+    KeyGate.Status.Text = "Checking key..."
+    KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
+
+    local loaded = KeyGate.KeysLoaded
+    if not loaded then
+        loaded = pcall(function() LoadKeysFromURL() end) and KeyGate.KeysLoaded
     end
 
-    KeyGateBusy = true
     local valid = KeyGate.ValidKeys[key] == true
-    KeyGateBusy = false
+    KeyGate.InteractionBusy = false
 
     if not valid then
-        KeyGate.Status.Text = "Invalid key."
+        if not loaded then
+            KeyGate.Status.Text = "Could not load the key list."
+        else
+            KeyGate.Status.Text = "Invalid key."
+        end
         KeyGate.Status.TextColor3 = CONFIG.Colors.Red
         return
     end
@@ -620,10 +630,45 @@ SubmitKey = function()
     KeyGate.Status.Text = "Access granted."
     KeyGate.Status.TextColor3 = CONFIG.Colors.Green
     KeyGate.Button.Text = "Unlocked"
-    OpenAuthorizedMenu()
+    State.KeyAuthorized = true
+    _G.__BravoHackKeyAuthorized = true
+
+    if ScreenGui then
+        ScreenGui.Enabled = true
+        ScreenGui.DisplayOrder = 10000
+    end
+    if Overlay then
+        Overlay.Enabled = true
+        Overlay.DisplayOrder = 9999
+    end
+    if MainFrame then
+        MainFrame.Visible = true
+        MainFrame.Size = CONFIG.Sizes.Window
+    end
+    SetKeyGateVisible(false)
+
+    task.defer(function()
+        pcall(function() KeyGate.Gui:Destroy() end)
+    end)
 end
 
-KeyGate.Button.MouseButton1Click:Connect(SubmitKey)
+local function ConnectOnce(button, callback)
+    local busy = false
+    local function fire()
+        if busy then return end
+        busy = true
+        task.defer(function()
+            pcall(callback)
+            task.wait(0.15)
+            busy = false
+        end)
+    end
+    button.Activated:Connect(fire)
+    button.MouseButton1Click:Connect(fire)
+end
+
+ConnectOnce(KeyGate.Button, SubmitKey)
+
 KeyGate.Input.FocusLost:Connect(function(enterPressed)
     if enterPressed then
         SubmitKey()
@@ -631,10 +676,7 @@ KeyGate.Input.FocusLost:Connect(function(enterPressed)
 end)
 
 UserInputService.InputBegan:Connect(function(input)
-    if input.KeyCode ~= Enum.KeyCode.Return and input.KeyCode ~= Enum.KeyCode.KeypadEnter then
-        return
-    end
-    if KeyGate.Input:IsFocused() then
+    if (input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter) and KeyGate.Input:IsFocused() then
         SubmitKey()
     end
 end)
@@ -643,10 +685,9 @@ local function CopyKeyLink()
     local copied = false
     local function tryClipboard(fn)
         if type(fn) ~= "function" then return end
-        local ok = pcall(fn, KeyGate.SourceURL)
+        local ok = pcall(function() fn(KeyGate.SourceURL) end)
         if ok then copied = true end
     end
-
     tryClipboard(setclipboard)
     if not copied then tryClipboard(toclipboard) end
     if not copied then tryClipboard(set_clipboard) end
@@ -656,12 +697,12 @@ local function CopyKeyLink()
         KeyGate.Status.Text = "Key link copied to clipboard."
         KeyGate.Status.TextColor3 = CONFIG.Colors.Green
     else
-        KeyGate.Status.Text = KeyGate.SourceURL
+        KeyGate.Status.Text = "Clipboard is unavailable in this environment."
         KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
     end
 end
 
-KeyGate.GetKeyButton.MouseButton1Click:Connect(CopyKeyLink)
+ConnectOnce(KeyGate.GetKeyButton, CopyKeyLink)
 
 local function DestroyBravoGuis()
     local names = {
@@ -675,7 +716,6 @@ local function DestroyBravoGuis()
         DeveloperChatLog = true,
         DeveloperInventoryView = true,
     }
-
     for _, child in ipairs(PlayerGui:GetChildren()) do
         if child:IsA("ScreenGui") and names[child.Name] then
             pcall(function() child:Destroy() end)
@@ -683,16 +723,19 @@ local function DestroyBravoGuis()
     end
 end
 
-KeyGate.UninjectButton.MouseButton1Click:Connect(function()
-    if _G.__BravoHackUnloaded then return end
+local function UninjectFromKeyGate()
     _G.__BravoHackUnloaded = true
     State.KeyAuthorized = false
     State.MenuOpen = false
     pcall(function() ContextActionService:UnbindAction("BravoHack_MenuToggle") end)
     pcall(function() RunService:UnbindFromRenderStep("CheatMenuAimAssist") end)
     pcall(function() RunService:UnbindFromRenderStep("BravoHackTriggerbot") end)
-    DestroyBravoGuis()
-end)
+    pcall(function() RunService:UnbindFromRenderStep("DeveloperFreecam") end)
+    pcall(function() if KeyGate.Gui then KeyGate.Gui:Destroy() end end)
+    pcall(DestroyBravoGuis)
+end
+
+ConnectOnce(KeyGate.UninjectButton, UninjectFromKeyGate)
 
 task.spawn(function()
     LoadKeysFromURL()
@@ -2713,9 +2756,20 @@ function CreateTriggerbotTargetDropdown(parent)
 end
 
 function GetAimTargetPart(char, targetName)
-    targetName = targetName or State.AimTargetPart
-    if not char or not targetName then return nil end
-    return char:FindFirstChild(targetName)
+    if not char then return nil end
+    targetName = targetName or State.AimTargetPart or "Head"
+    local part = char:FindFirstChild(targetName)
+    if part and part:IsA("BasePart") then
+        return part
+    end
+    local fallbacks = {"Head", "UpperTorso", "Torso", "HumanoidRootPart"}
+    for _, name in ipairs(fallbacks) do
+        local fallback = char:FindFirstChild(name)
+        if fallback and fallback:IsA("BasePart") then
+            return fallback
+        end
+    end
+    return nil
 end
 
 function AimTargetVisible(targetPart, useWallCheck)
@@ -4053,13 +4107,15 @@ end
 RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Value + 1, function()
     if not State.Features.Aimbot or not Camera then return end
 
-    local activationHeld
-    if State.Features.AimbotAlwaysOn then
-        activationHeld = true
-    elseif State.Features.AimbotUseCustomKey then
-        activationHeld = UserInputService:IsKeyDown(CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt)
-    else
-        activationHeld = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+    local activationHeld = State.Features.AimbotAlwaysOn
+    if not activationHeld then
+        local keyHeld = UserInputService:IsKeyDown(CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt)
+        local mouseHeld = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+        if State.Features.AimbotUseCustomKey then
+            activationHeld = keyHeld
+        else
+            activationHeld = mouseHeld or keyHeld
+        end
     end
     if not activationHeld then return end
 
@@ -4113,6 +4169,15 @@ function PerformTriggerClick()
         if ok then return true end
     end
 
+    if typeof(mouse1press) == "function" and typeof(mouse1release) == "function" then
+        local ok = pcall(function()
+            mouse1press()
+            task.wait()
+            mouse1release()
+        end)
+        if ok then return true end
+    end
+
     local ok = pcall(function()
         local vim = game:GetService("VirtualInputManager")
         local mousePos = UserInputService:GetMouseLocation()
@@ -4129,7 +4194,10 @@ local triggerTargetPlayer = nil
 RunService:BindToRenderStep("BravoHackTriggerbot", Enum.RenderPriority.Camera.Value + 2, function()
     if not State.Features.Triggerbot or not Camera then return end
     if State.Features.TriggerbotOnlyWhileMouse1 and not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
-    if not State.Features.TriggerbotAlwaysOn and not UserInputService:IsKeyDown(CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt) then return end
+    if not State.Features.TriggerbotAlwaysOn then
+        local triggerKeyHeld = UserInputService:IsKeyDown(CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt)
+        if not triggerKeyHeld then return end
+    end
 
     if os.clock() - triggerLastClick < State.Sliders.TriggerbotCooldown then return end
 
