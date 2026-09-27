@@ -65,6 +65,15 @@ local State = {
         Chams = false,
         ChamsTeamColor = false,
         AimAssist = false,
+        Aimbot = false,
+        AimbotAlwaysOn = false,
+        AimbotUseCustomKey = false,
+        AimbotPrediction = false,
+        Triggerbot = false,
+        TriggerbotAlwaysOn = true,
+        TriggerbotOnlyWhileMouse1 = false,
+        TriggerbotTeamCheck = true,
+        TriggerbotWallCheck = true,
         ShowFOV = false,
         InfiniteJump = false,
         BunnyHop = false,
@@ -87,12 +96,12 @@ local State = {
     },
     Sliders = {
         ESPDistance = 300,
-        AimFOV = 100,
+        AimFOV = 220,
         AimSmoothness = 0.25,
         AimbotMaxDistance = 1000,
         AimbotHitChance = 100,
         AimbotPredictionAmount = 0.12,
-        TriggerbotFOV = 12,
+        TriggerbotFOV = 45,
         TriggerbotDelay = 0.05,
         TriggerbotCooldown = 0.12,
         TriggerbotHitChance = 100,
@@ -112,6 +121,7 @@ local State = {
     ProtectedPlayers = {},
     ChatMessages = {},
     KeyAuthorized = false,
+    Input = { AimbotKey = false, TriggerbotKey = false, RMB = false, LMB = false },
 }
 
 local IsProtectedPlayer
@@ -377,19 +387,26 @@ NewCorner(3, CloseButton)
 
 local Sidebar = Instance.new("Frame")
 Sidebar.Name = "Sidebar"
-Sidebar.Size = UDim2.fromOffset(0, 0)
-Sidebar.Position = UDim2.fromOffset(0, 0)
-Sidebar.BackgroundTransparency = 1
+Sidebar.Size = UDim2.new(0, 108, 1, -CONFIG.Sizes.TopBar - CONFIG.Sizes.StatusBar)
+Sidebar.Position = UDim2.fromOffset(0, CONFIG.Sizes.TopBar)
+Sidebar.BackgroundColor3 = CONFIG.Colors.Sidebar
+Sidebar.BackgroundTransparency = 0.08
 Sidebar.BorderSizePixel = 0
-Sidebar.Visible = false
+Sidebar.Visible = true
 Sidebar.Parent = MainFrame
+NewStroke(Sidebar, CONFIG.Colors.Stroke, 1, 0.35)
 
 local SidebarScroll = Instance.new("ScrollingFrame")
 SidebarScroll.Name = "SidebarScroll"
-SidebarScroll.Size = UDim2.fromOffset(0, 0)
+SidebarScroll.Size = UDim2.new(1, -10, 1, -10)
+SidebarScroll.Position = UDim2.fromOffset(5, 5)
 SidebarScroll.BackgroundTransparency = 1
 SidebarScroll.BorderSizePixel = 0
-SidebarScroll.Visible = false
+SidebarScroll.ScrollBarThickness = 3
+SidebarScroll.ScrollBarImageColor3 = CONFIG.Colors.Accent
+SidebarScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+SidebarScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+SidebarScroll.Visible = true
 SidebarScroll.Parent = Sidebar
 
 local TopTabBar = Instance.new("Frame")
@@ -399,6 +416,7 @@ TopTabBar.Position = UDim2.fromOffset(8, CONFIG.Sizes.TopBar)
 TopTabBar.BackgroundColor3 = Color3.fromRGB(17, 17, 19)
 TopTabBar.BorderSizePixel = 0
 TopTabBar.Parent = MainFrame
+TopTabBar.Visible = false
 NewStroke(TopTabBar, CONFIG.Colors.Stroke, 1, 0.15)
 
 local TopTabLayout = Instance.new("UIListLayout")
@@ -421,12 +439,13 @@ Indicator.BackgroundColor3 = CONFIG.Colors.Accent
 Indicator.BorderSizePixel = 0
 Indicator.ZIndex = 20
 Indicator.Parent = MainFrame
+Indicator.Visible = false
 NewCorner(0, Indicator)
 
 local ContentArea = Instance.new("Frame")
 ContentArea.Name = "ContentArea"
-ContentArea.Size = UDim2.new(1, 0, 1, -CONFIG.Sizes.TopBar - 34 - CONFIG.Sizes.StatusBar)
-ContentArea.Position = UDim2.new(0, 0, 0, CONFIG.Sizes.TopBar + 34)
+ContentArea.Size = UDim2.new(1, -118, 1, -CONFIG.Sizes.TopBar - CONFIG.Sizes.StatusBar - 8)
+ContentArea.Position = UDim2.new(0, 114, 0, CONFIG.Sizes.TopBar + 4)
 ContentArea.BackgroundTransparency = 1
 ContentArea.Parent = MainFrame
 
@@ -767,6 +786,17 @@ FPSLabel.TextXAlignment = Enum.TextXAlignment.Right
 FPSLabel.Text = "FPS: --"
 FPSLabel.Parent = StatusBar
 
+local SidebarLayout = Instance.new("UIListLayout")
+SidebarLayout.Padding = UDim.new(0, 6)
+SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SidebarLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+SidebarLayout.Parent = SidebarScroll
+
+local SidebarPadding = Instance.new("UIPadding")
+SidebarPadding.PaddingTop = UDim.new(0, 2)
+SidebarPadding.PaddingBottom = UDim.new(0, 2)
+SidebarPadding.Parent = SidebarScroll
+
 local categories = { "Visuals", "Combat", "Movement", "Player", "World", "Misc", "Lua", "Settings" }
 local TabIcons = {
     Visuals = "◈",
@@ -806,22 +836,22 @@ for i, name in ipairs(categories) do
 
     local btn = Instance.new("TextButton")
     btn.Name = name
-    btn.Size = UDim2.fromOffset(78, 28)
+    btn.Size = UDim2.new(1, -6, 0, 34)
     btn.BackgroundColor3 = name == State.CurrentTab and Color3.fromRGB(32, 34, 40) or Color3.fromRGB(17, 17, 19)
     btn.BackgroundTransparency = name == State.CurrentTab and 0 or 0.2
-    btn.Text = name
+    btn.Text = (TabIcons[name] or "•") .. "  " .. name
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 11
+    btn.TextSize = 12
     btn.TextColor3 = (name == State.CurrentTab) and CONFIG.Colors.Text or CONFIG.Colors.SubText
-    btn.TextXAlignment = Enum.TextXAlignment.Center
+    btn.TextXAlignment = Enum.TextXAlignment.Left
     btn.TextYAlignment = Enum.TextYAlignment.Center
     btn.AutoButtonColor = false
     btn.Active = true
     btn.ZIndex = 10
     btn.LayoutOrder = i
     btn.Selectable = true
-    btn.Parent = TopTabBar
-    NewCorner(4, btn)
+    btn.Parent = SidebarScroll
+    NewCorner(6, btn)
     SidebarButtons[name] = btn
 end
 
@@ -833,16 +863,7 @@ local function RefreshTabVisuals()
             BackgroundColor3 = selected and Color3.fromRGB(32, 34, 40) or Color3.fromRGB(17, 17, 19),
             BackgroundTransparency = selected and 0 or 0.2,
         })
-    end
-    local currentButton = SidebarButtons[State.CurrentTab]
-    if currentButton then
-        Tween(Indicator, TI_MED, {
-            Position = UDim2.fromOffset(
-                currentButton.AbsolutePosition.X - MainFrame.AbsolutePosition.X,
-                TopTabBar.AbsolutePosition.Y - MainFrame.AbsolutePosition.Y + TopTabBar.AbsoluteSize.Y - 3
-            ),
-            Size = UDim2.fromOffset(currentButton.AbsoluteSize.X, 2),
-        })
+        tabButton.Text = (TabIcons[tabName] or "•") .. "  " .. tabName
     end
     TabTitle.Text = State.CurrentTab
 end
@@ -859,22 +880,21 @@ local function SwitchTab(name)
     previousPage.Visible = false
     State.CurrentTab = name
     TabTitle.Text = name
-    local basePos = PageBasePositions[name] or UDim2.new(0, 10, 0, 54)
-    nextPage.Position = UDim2.new(basePos.X.Scale, basePos.X.Offset + 14, basePos.Y.Scale, basePos.Y.Offset)
+    local basePos = PageBasePositions[name] or UDim2.new(0, 10, 0, 46)
+    nextPage.Position = basePos
     nextPage.Visible = true
-    Tween(nextPage, TI_MED, { Position = basePos })
     RefreshTabVisuals()
 end
 
 for name, btn in pairs(SidebarButtons) do
     btn.MouseEnter:Connect(function()
-        Tween(btn, TI_FAST, { TextColor3 = CONFIG.Colors.Text, BackgroundTransparency = 0.88 })
+        Tween(btn, TI_FAST, { TextColor3 = CONFIG.Colors.Text, BackgroundTransparency = 0.05 })
     end)
     btn.MouseLeave:Connect(function()
         local selected = (State.CurrentTab == name)
         Tween(btn, TI_FAST, {
             TextColor3 = selected and CONFIG.Colors.Text or CONFIG.Colors.SubText,
-            BackgroundTransparency = selected and 0.82 or 1,
+            BackgroundTransparency = selected and 0 or 0.2,
         })
     end)
     btn.MouseButton1Click:Connect(function()
@@ -1187,7 +1207,11 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
             Notify(text, state and "Toggled On" or "Toggled Off", true)
         end
     end
-    hitButton.MouseButton1Click:Connect(function() setState(not state) end)
+    local function toggleFromInput()
+        setState(not state)
+    end
+    hitButton.Activated:Connect(toggleFromInput)
+    hitButton.MouseButton1Click:Connect(toggleFromInput)
     row.MouseEnter:Connect(function() Tween(row, TI_FAST, { BackgroundTransparency = 0 }) end)
     row.MouseLeave:Connect(function() Tween(row, TI_FAST, { BackgroundTransparency = 0.2 }) end)
 
@@ -2762,7 +2786,7 @@ function GetAimTargetPart(char, targetName)
     if part and part:IsA("BasePart") then
         return part
     end
-    local fallbacks = {"Head", "UpperTorso", "Torso", "HumanoidRootPart"}
+    local fallbacks = {"Head", "UpperTorso", "Torso", "LowerTorso", "HumanoidRootPart"}
     for _, name in ipairs(fallbacks) do
         local fallback = char:FindFirstChild(name)
         if fallback and fallback:IsA("BasePart") then
@@ -3357,76 +3381,79 @@ end
 
 do
     local page = Pages.Combat
+    CreateSectionLabel(page, "Aimbot — hold RMB by default", 1)
     CreateAimTargetDropdown(page)
-    CreateToggle(page, "Enable Aimbot", false, 1, function(v)
+    CreateToggle(page, "Enable Aimbot", false, 3, function(v)
         State.Features.Aimbot = v
-    end, "Aimbot", "AimTarget")
-    CreateToggle(page, "Always On", false, 2, function(v)
+    end, "Aimbot")
+    CreateToggle(page, "Always On", false, 4, function(v)
         State.Features.AimbotAlwaysOn = v
     end, "AimbotAlwaysOn")
-    CreateToggle(page, "Use Custom Activation Key", false, 3, function(v)
+    CreateToggle(page, "Use Custom Activation Key", false, 5, function(v)
         State.Features.AimbotUseCustomKey = v
     end, "AimbotUseCustomKey")
-    CreateKeybind(page, "Aimbot Activation Key", CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt, 4, function(newKey)
+    CreateKeybind(page, "Aimbot Activation Key", CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt, 6, function(newKey)
         CONFIG.Keybinds.Aimbot = newKey
     end)
-    CreateToggle(page, "Team Check", false, 5, function(v)
+    CreateToggle(page, "Team Check", false, 7, function(v)
         State.Features.TeamCheck = v
     end, "TeamCheck")
-    CreateToggle(page, "Wall Check", false, 6, function(v)
+    CreateToggle(page, "Wall Check", false, 8, function(v)
         State.Features.WallCheck = v
     end, "WallCheck")
-    CreateSlider(page, "Aimbot FOV (pixels)", 20, 400, State.Sliders.AimFOV, 7, function(v)
+    CreateSlider(page, "Aimbot FOV (pixels)", 20, 400, State.Sliders.AimFOV, 9, function(v)
         State.Sliders.AimFOV = v
     end)
-    CreateSlider(page, "Aimbot Smoothness", 0.05, 1, State.Sliders.AimSmoothness, 8, function(v)
+    CreateSlider(page, "Aimbot Smoothness", 0.05, 1, State.Sliders.AimSmoothness, 10, function(v)
         State.Sliders.AimSmoothness = v
     end, 2)
-    CreateSlider(page, "Aimbot Max Distance", 50, 3000, State.Sliders.AimbotMaxDistance, 9, function(v)
+    CreateSlider(page, "Aimbot Max Distance", 50, 3000, State.Sliders.AimbotMaxDistance, 11, function(v)
         State.Sliders.AimbotMaxDistance = v
     end)
-    CreateSlider(page, "Aimbot Hit Chance (%)", 1, 100, State.Sliders.AimbotHitChance, 10, function(v)
+    CreateSlider(page, "Aimbot Hit Chance (%)", 1, 100, State.Sliders.AimbotHitChance, 12, function(v)
         State.Sliders.AimbotHitChance = v
     end)
-    CreateToggle(page, "Prediction", false, 11, function(v)
+    CreateToggle(page, "Prediction", false, 13, function(v)
         State.Features.AimbotPrediction = v
     end, "AimbotPrediction")
-    CreateSlider(page, "Prediction Amount", 0, 0.5, State.Sliders.AimbotPredictionAmount, 12, function(v)
+    CreateSlider(page, "Prediction Amount", 0, 0.5, State.Sliders.AimbotPredictionAmount, 14, function(v)
         State.Sliders.AimbotPredictionAmount = v
     end, 2)
-    CreateToggle(page, "Show FOV Circle", false, 13, function(v)
+    CreateToggle(page, "Show FOV Circle", false, 15, function(v)
         State.Features.ShowFOV = v
     end, "ShowFOV", "Accent")
 
-    CreateToggle(page, "Enable Triggerbot", false, 14, function(v)
+    CreateSectionLabel(page, "Triggerbot — configurable activation", 16)
+    CreateToggle(page, "Enable Triggerbot", false, 17, function(v)
         State.Features.Triggerbot = v
-    end, "Triggerbot", "AimTarget")
-    CreateToggle(page, "Triggerbot Always On", false, 15, function(v)
+    end, "Triggerbot")
+    CreateToggle(page, "Triggerbot Always On", true, 18, function(v)
         State.Features.TriggerbotAlwaysOn = v
     end, "TriggerbotAlwaysOn")
-    CreateKeybind(page, "Triggerbot Activation Key", CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt, 16, function(newKey)
+    CreateKeybind(page, "Triggerbot Activation Key", CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt, 19, function(newKey)
         CONFIG.Keybinds.Triggerbot = newKey
     end)
-    CreateToggle(page, "Only While Holding Mouse1", false, 17, function(v)
+    CreateToggle(page, "Only While Holding Mouse1", false, 20, function(v)
         State.Features.TriggerbotOnlyWhileMouse1 = v
     end, "TriggerbotOnlyWhileMouse1")
-    CreateToggle(page, "Triggerbot Team Check", true, 18, function(v)
+    CreateToggle(page, "Triggerbot Team Check", true, 21, function(v)
         State.Features.TriggerbotTeamCheck = v
     end, "TriggerbotTeamCheck")
-    CreateToggle(page, "Triggerbot Wall Check", true, 19, function(v)
+    CreateToggle(page, "Triggerbot Wall Check", true, 22, function(v)
         State.Features.TriggerbotWallCheck = v
     end, "TriggerbotWallCheck")
-    CreateTriggerbotTargetDropdown(page)
-    CreateSlider(page, "Triggerbot FOV (pixels)", 2, 50, State.Sliders.TriggerbotFOV, 21, function(v)
+    local triggerDropdownRow = CreateTriggerbotTargetDropdown(page)
+    triggerDropdownRow.LayoutOrder = 23
+    CreateSlider(page, "Triggerbot FOV (pixels)", 5, 100, State.Sliders.TriggerbotFOV, 24, function(v)
         State.Sliders.TriggerbotFOV = v
     end)
-    CreateSlider(page, "Triggerbot Delay (sec)", 0, 0.5, State.Sliders.TriggerbotDelay, 22, function(v)
+    CreateSlider(page, "Triggerbot Delay (sec)", 0, 0.5, State.Sliders.TriggerbotDelay, 25, function(v)
         State.Sliders.TriggerbotDelay = v
     end, 2)
-    CreateSlider(page, "Triggerbot Cooldown (sec)", 0.05, 1, State.Sliders.TriggerbotCooldown, 23, function(v)
+    CreateSlider(page, "Triggerbot Cooldown (sec)", 0.05, 1, State.Sliders.TriggerbotCooldown, 26, function(v)
         State.Sliders.TriggerbotCooldown = v
     end, 2)
-    CreateSlider(page, "Triggerbot Hit Chance (%)", 1, 100, State.Sliders.TriggerbotHitChance, 24, function(v)
+    CreateSlider(page, "Triggerbot Hit Chance (%)", 1, 100, State.Sliders.TriggerbotHitChance, 27, function(v)
         State.Sliders.TriggerbotHitChance = v
     end)
 end
@@ -4104,13 +4131,44 @@ do
     end)
 end
 
+UserInputService.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == (CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt) then
+            State.Input.AimbotKey = true
+        end
+        if input.KeyCode == (CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt) then
+            State.Input.TriggerbotKey = true
+        end
+    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+        State.Input.RMB = true
+    elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+        State.Input.LMB = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Keyboard then
+        if input.KeyCode == (CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt) then
+            State.Input.AimbotKey = false
+        end
+        if input.KeyCode == (CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt) then
+            State.Input.TriggerbotKey = false
+        end
+    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+        State.Input.RMB = false
+    elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
+        State.Input.LMB = false
+    end
+end)
+
 RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Value + 1, function()
+    Camera = Workspace.CurrentCamera or Camera
     if not State.Features.Aimbot or not Camera then return end
 
     local activationHeld = State.Features.AimbotAlwaysOn
     if not activationHeld then
-        local keyHeld = UserInputService:IsKeyDown(CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt)
-        local mouseHeld = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+        local keyHeld = State.Input.AimbotKey or UserInputService:IsKeyDown(CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt)
+        local mouseHeld = State.Input.RMB or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
         if State.Features.AimbotUseCustomKey then
             activationHeld = keyHeld
         else
@@ -4167,6 +4225,9 @@ function PerformTriggerClick()
     if typeof(mouse1click) == "function" then
         local ok = pcall(mouse1click)
         if ok then return true end
+        local mousePos = UserInputService:GetMouseLocation()
+        ok = pcall(function() mouse1click(mousePos.X, mousePos.Y) end)
+        if ok then return true end
     end
 
     if typeof(mouse1press) == "function" and typeof(mouse1release) == "function" then
@@ -4192,12 +4253,12 @@ local triggerLastClick = 0
 local triggerTargetPlayer = nil
 
 RunService:BindToRenderStep("BravoHackTriggerbot", Enum.RenderPriority.Camera.Value + 2, function()
+    Camera = Workspace.CurrentCamera or Camera
     if not State.Features.Triggerbot or not Camera then return end
-    if State.Features.TriggerbotOnlyWhileMouse1 and not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
-    if not State.Features.TriggerbotAlwaysOn then
-        local triggerKeyHeld = UserInputService:IsKeyDown(CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt)
-        if not triggerKeyHeld then return end
-    end
+    local lmbHeld = State.Input.LMB or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1)
+    local triggerKeyHeld = State.Input.TriggerbotKey or UserInputService:IsKeyDown(CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt)
+    if State.Features.TriggerbotOnlyWhileMouse1 and not lmbHeld then return end
+    if not State.Features.TriggerbotAlwaysOn and not triggerKeyHeld then return end
 
     if os.clock() - triggerLastClick < State.Sliders.TriggerbotCooldown then return end
 
@@ -4212,7 +4273,7 @@ RunService:BindToRenderStep("BravoHackTriggerbot", Enum.RenderPriority.Camera.Va
             local humanoid = char and char:FindFirstChildOfClass("Humanoid")
             local targetPart = GetAimTargetPart(char, State.TriggerbotTargetPart)
             local protected = IsProtectedPlayer(plr)
-            local sameTeam = IsSameTeam(plr)
+            local sameTeam = LocalPlayer.Team ~= nil and plr.Team ~= nil and LocalPlayer.Team == plr.Team
             if humanoid and humanoid.Health > 0 and targetPart and not protected and (not State.Features.TriggerbotTeamCheck or not sameTeam) then
                 if not State.Features.TriggerbotWallCheck or AimTargetVisible(targetPart, true) then
                     local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
