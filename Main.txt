@@ -17,10 +17,10 @@ local CONFIG = {
     Keybinds = {
 
         ToggleMenu = Enum.KeyCode.RightShift,
-
         Freecam = Enum.KeyCode.F,
-
         FreecamTeleport = Enum.KeyCode.RightControl,
+        Triggerbot = Enum.KeyCode.LeftAlt,
+        Aimbot = Enum.KeyCode.LeftAlt,
     },
     Colors = {
         Background  = Color3.fromRGB(15, 15, 17),
@@ -78,7 +78,6 @@ local State = {
         PlayerList = false,
         InventoryView = false,
         ToolViewer = false,
-        DexExplorer = false,
         Spectate = false,
         Notifications = true,
         ForceField = false,
@@ -90,6 +89,13 @@ local State = {
         ESPDistance = 300,
         AimFOV = 100,
         AimSmoothness = 0.25,
+        AimbotMaxDistance = 1000,
+        AimbotHitChance = 100,
+        AimbotPredictionAmount = 0.12,
+        TriggerbotFOV = 12,
+        TriggerbotDelay = 0.05,
+        TriggerbotCooldown = 0.12,
+        TriggerbotHitChance = 100,
         WalkSpeed = 16,
         JumpPower = 50,
         CameraFOV = 70,
@@ -101,6 +107,7 @@ local State = {
     ESPObjects = {},
     SelectedPlayer = nil,
     AimTargetPart = nil,
+    TriggerbotTargetPart = "Head",
     PlayerActionExpanded = nil,
     ProtectedPlayers = {},
     ChatMessages = {},
@@ -133,6 +140,7 @@ local EnableFly, DisableFly
 local EnableGodMode, DisableGodMode
 local EnableFreecam, DisableFreecam
 local ApplyMovementSettings, ApplyFullbright, ApplyRemoveFog
+local LoadDex
 
 local TI_FAST = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local TI_MED  = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -684,6 +692,7 @@ KeyGate.UninjectButton.MouseButton1Click:Connect(function()
     State.MenuOpen = false
     pcall(function() ContextActionService:UnbindAction("BravoHack_MenuToggle") end)
     pcall(function() RunService:UnbindFromRenderStep("CheatMenuAimAssist") end)
+    pcall(function() RunService:UnbindFromRenderStep("BravoHackTriggerbot") end)
     DestroyBravoGuis()
 end)
 
@@ -717,7 +726,7 @@ FPSLabel.TextXAlignment = Enum.TextXAlignment.Right
 FPSLabel.Text = "FPS: --"
 FPSLabel.Parent = StatusBar
 
-local categories = { "Visuals", "Combat", "Movement", "Player", "World", "Misc", "Settings" }
+local categories = { "Visuals", "Combat", "Movement", "Player", "World", "Misc", "Lua", "Settings" }
 local TabIcons = {
     Visuals = "◈",
     Combat = "⚔",
@@ -725,6 +734,7 @@ local TabIcons = {
     Player = "♙",
     World = "◉",
     Misc = "☷",
+    Lua = "</>",
     Settings = "⚙",
 }
 local Pages = {}
@@ -847,20 +857,6 @@ local FeatureColorRefs = {}
 local ApplyESPColors
 local FOVStroke
 local Notify
-
-local function CreateSectionLabel(parent, text, order)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 0, 20)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 12
-    lbl.TextColor3 = CONFIG.Colors.Accent
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.Text = string.upper(text)
-    lbl.LayoutOrder = order
-    lbl.Parent = parent
-    return lbl
-end
 
 local function OpenColorPicker(colorName, titleText)
     if ColorPickerGui then ColorPickerGui:Destroy() end
@@ -1147,7 +1143,7 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
             if not ok then warn("[BravoHack] Toggle error ("..text.."):", err) end
         end
         if shouldNotify and text ~= "Notifications" then
-            Notify(text, state and "Ingeschakeld" or "Offgeschakeld", true)
+            Notify(text, state and "Toggled On" or "Toggled Off", true)
         end
     end
     hitButton.MouseButton1Click:Connect(function() setState(not state) end)
@@ -1401,7 +1397,7 @@ local function CreateActionButton(parent, text, order, callback, keyName)
             if not ok then warn("[BravoHack] Button error ("..text.."):", err) end
         end
         if State.Features.Notifications then
-            Notify(text, "Offgevoerd", false)
+            Notify(text, "Action executed.", false)
         end
     end)
 
@@ -1412,7 +1408,7 @@ local function CreateActionButton(parent, text, order, callback, keyName)
                 if not ok then warn("[BravoHack] Keybind action error ("..text.."):", err) end
             end
             if State.Features.Notifications then
-                Notify(text, "Offgevoerd", false)
+                Notify(text, "Action executed.", false)
             end
         end
     end
@@ -1436,21 +1432,6 @@ local function TriggerKeybind(keyCode)
         end
     end
     return false
-end
-
-local function CreateInfoLabel(parent, text, order)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 0, 18)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 11
-    lbl.TextColor3 = CONFIG.Colors.SubText
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.TextWrapped = true
-    lbl.Text = text
-    lbl.LayoutOrder = order
-    lbl.Parent = parent
-    return lbl
 end
 
 function ShouldTrack()
@@ -2600,14 +2581,151 @@ local function CreateAimTargetDropdown(parent)
     return row
 end
 
-local function GetAimTargetPart(char)
-    if not char or not State.AimTargetPart then return nil end
-    return char:FindFirstChild(State.AimTargetPart)
+local TriggerbotTargetDropdownRef
+
+local function CreateTriggerbotTargetDropdown(parent)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 66)
+    row.BackgroundColor3 = CONFIG.Colors.Panel
+    row.BackgroundTransparency = 0.08
+    row.BorderSizePixel = 0
+    row.LayoutOrder = 4
+    row.ClipsDescendants = false
+    row.ZIndex = 30
+    row.Parent = parent
+    NewCorner(4, row)
+    NewStroke(row, CONFIG.Colors.Stroke, 1, 0.55)
+
+    local label = Instance.new("TextLabel")
+    label.BackgroundTransparency = 1
+    label.Position = UDim2.fromOffset(12, 7)
+    label.Size = UDim2.new(1, -24, 0, 18)
+    label.Font = Enum.Font.GothamMedium
+    label.TextSize = 12
+    label.TextColor3 = CONFIG.Colors.Text
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Text = "Triggerbot Target"
+    label.ZIndex = 31
+    label.Parent = row
+
+    local dropdown = Instance.new("TextButton")
+    dropdown.Name = "TriggerbotTargetDropdown"
+    dropdown.Position = UDim2.fromOffset(12, 31)
+    dropdown.Size = UDim2.new(1, -24, 0, 26)
+    dropdown.BackgroundColor3 = Color3.fromRGB(27, 27, 30)
+    dropdown.BorderSizePixel = 0
+    dropdown.Font = Enum.Font.Gotham
+    dropdown.TextSize = 11
+    dropdown.TextColor3 = CONFIG.Colors.Text
+    dropdown.TextXAlignment = Enum.TextXAlignment.Left
+    dropdown.AutoButtonColor = false
+    dropdown.Text = "  " .. tostring(State.TriggerbotTargetPart or "Head") .. "   ▾"
+    dropdown.ZIndex = 32
+    dropdown.Parent = row
+    NewCorner(3, dropdown)
+    NewStroke(dropdown, CONFIG.Colors.Stroke, 1, 0.15)
+
+    local menu = Instance.new("Frame")
+    menu.Name = "TriggerbotTargetDropdownMenu"
+    menu.Position = UDim2.fromOffset(12, 60)
+    menu.Size = UDim2.new(1, -24, 0, 0)
+    menu.BackgroundColor3 = Color3.fromRGB(18, 18, 21)
+    menu.BorderSizePixel = 0
+    menu.Visible = false
+    menu.ClipsDescendants = true
+    menu.ZIndex = 40
+    menu.Parent = row
+    NewCorner(3, menu)
+    NewStroke(menu, CONFIG.Colors.Stroke, 1, 0.15)
+
+    local menuScroll = Instance.new("ScrollingFrame")
+    menuScroll.Size = UDim2.fromScale(1, 1)
+    menuScroll.BackgroundTransparency = 1
+    menuScroll.BorderSizePixel = 0
+    menuScroll.ScrollBarThickness = 3
+    menuScroll.ScrollBarImageColor3 = CONFIG.Colors.Accent
+    menuScroll.CanvasSize = UDim2.new()
+    menuScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    menuScroll.ZIndex = 41
+    menuScroll.Parent = menu
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 1)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = menuScroll
+
+    local targetOrder = {
+        "Head", "UpperTorso", "LowerTorso",
+        "LeftUpperArm", "LeftLowerArm", "LeftHand",
+        "RightUpperArm", "RightLowerArm", "RightHand",
+        "LeftUpperLeg", "LeftLowerLeg", "LeftFoot",
+        "RightUpperLeg", "RightLowerLeg", "RightFoot",
+    }
+    local displayNames = {
+        Head = "Head", UpperTorso = "Upper Torso", LowerTorso = "Lower Torso",
+        LeftUpperArm = "Left Upper Arm", LeftLowerArm = "Left Lower Arm", LeftHand = "Left Hand",
+        RightUpperArm = "Right Upper Arm", RightLowerArm = "Right Lower Arm", RightHand = "Right Hand",
+        LeftUpperLeg = "Left Upper Leg", LeftLowerLeg = "Left Lower Leg", LeftFoot = "Left Foot",
+        RightUpperLeg = "Right Upper Leg", RightLowerLeg = "Right Lower Leg", RightFoot = "Right Foot",
+    }
+
+    local open = false
+    local closedHeight = 66
+    local openHeight = 66 + 154
+
+    local function setOpen(value)
+        open = value
+        menu.Visible = open
+        Tween(row, TI_FAST, { Size = UDim2.new(1, 0, 0, open and openHeight or closedHeight) })
+        Tween(menu, TI_FAST, { Size = UDim2.new(1, -24, 0, open and 150 or 0) })
+    end
+
+    for i, name in ipairs(targetOrder) do
+        local option = Instance.new("TextButton")
+        option.Size = UDim2.new(1, -6, 0, 24)
+        option.BackgroundColor3 = Color3.fromRGB(29, 29, 33)
+        option.BorderSizePixel = 0
+        option.Font = Enum.Font.Gotham
+        option.TextSize = 10
+        option.TextColor3 = CONFIG.Colors.Text
+        option.Text = displayNames[name]
+        option.TextXAlignment = Enum.TextXAlignment.Left
+        option.AutoButtonColor = false
+        option.LayoutOrder = i
+        option.ZIndex = 42
+        option.Parent = menuScroll
+        NewCorner(2, option)
+        option.MouseEnter:Connect(function()
+            Tween(option, TI_FAST, { BackgroundColor3 = Color3.fromRGB(43, 43, 48) })
+        end)
+        option.MouseLeave:Connect(function()
+            Tween(option, TI_FAST, { BackgroundColor3 = Color3.fromRGB(29, 29, 33) })
+        end)
+        option.MouseButton1Click:Connect(function()
+            State.TriggerbotTargetPart = name
+            dropdown.Text = "  " .. displayNames[name] .. "   ▾"
+            setOpen(false)
+        end)
+    end
+
+    dropdown.MouseButton1Click:Connect(function()
+        setOpen(not open)
+    end)
+
+    TriggerbotTargetDropdownRef = { Button = dropdown, Menu = menu, SetOpen = setOpen }
+    return row
 end
 
-local function AimTargetVisible(targetPart)
+local function GetAimTargetPart(char, targetName)
+    targetName = targetName or State.AimTargetPart
+    if not char or not targetName then return nil end
+    return char:FindFirstChild(targetName)
+end
+
+local function AimTargetVisible(targetPart, useWallCheck)
     if not targetPart or not Camera then return false end
-    if not State.Features.WallCheck then return true end
+    if useWallCheck == nil then useWallCheck = State.Features.WallCheck end
+    if not useWallCheck then return true end
     local origin = Camera.CFrame.Position
     local direction = targetPart.Position - origin
     if direction.Magnitude <= 0.01 then return true end
@@ -2747,6 +2865,11 @@ RefreshPlayerListUI = function()
 
             btn.MouseButton1Click:Connect(function()
                 State.SelectedPlayer = plr
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl) then
+                    State.PlayerActionExpanded = nil
+                    State.TeleportToSelectedPlayer()
+                    return
+                end
                 State.PlayerActionExpanded = (State.PlayerActionExpanded == plr) and nil or plr
                 if MiscUI.SelectedLabel then
                     MiscUI.SelectedLabel.Text = "Selected: @" .. plr.Name
@@ -3128,7 +3251,6 @@ end)
 
 do
     local page = Pages.Visuals
-    CreateSectionLabel(page, "ESP VISUALS", 1)
     CreateToggle(page, "Player ESP (name + distance + HP)", false, 2, function(v)
         State.Features.ESP = v
         RefreshTracking()
@@ -3181,69 +3303,87 @@ do
     CreateSlider(page, "Max ESP distance", 50, 1000, State.Sliders.ESPDistance, 9, function(v)
         State.Sliders.ESPDistance = v
     end)
-    CreateInfoLabel(page, "Box ESP draws a 2D box around players. Healthbar shows live HP next to the box. Chams Team Color uses the player's Roblox TeamColor.", 10)
 end
 
 do
     local page = Pages.Combat
-    CreateSectionLabel(page, "AIM ASSIST", 1)
     CreateAimTargetDropdown(page)
-    CreateToggle(page, "Enable Aim Assist", false, 3, function(v)
-        State.Features.AimAssist = v
-    end, "AimAssist", "AimTarget")
-    CreateToggle(page, "Team Check", false, 4, function(v)
+    CreateToggle(page, "Enable Aimbot", false, 1, function(v)
+        State.Features.Aimbot = v
+    end, "Aimbot", "AimTarget")
+    CreateToggle(page, "Always On", false, 2, function(v)
+        State.Features.AimbotAlwaysOn = v
+    end, "AimbotAlwaysOn")
+    CreateToggle(page, "Use Custom Activation Key", false, 3, function(v)
+        State.Features.AimbotUseCustomKey = v
+    end, "AimbotUseCustomKey")
+    CreateKeybind(page, "Aimbot Activation Key", CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt, 4, function(newKey)
+        CONFIG.Keybinds.Aimbot = newKey
+    end)
+    CreateToggle(page, "Team Check", false, 5, function(v)
         State.Features.TeamCheck = v
     end, "TeamCheck")
-    CreateToggle(page, "Wall Check", false, 5, function(v)
+    CreateToggle(page, "Wall Check", false, 6, function(v)
         State.Features.WallCheck = v
     end, "WallCheck")
-    CreateSlider(page, "Aim Assist FOV (pixels)", 20, 400, State.Sliders.AimFOV, 7, function(v)
+    CreateSlider(page, "Aimbot FOV (pixels)", 20, 400, State.Sliders.AimFOV, 7, function(v)
         State.Sliders.AimFOV = v
     end)
-    CreateSlider(page, "Aim Smoothness", 0.05, 1, State.Sliders.AimSmoothness, 10, function(v)
+    CreateSlider(page, "Aimbot Smoothness", 0.05, 1, State.Sliders.AimSmoothness, 8, function(v)
         State.Sliders.AimSmoothness = v
     end, 2)
-    CreateToggle(page, "Show FOV circle", false, 11, function(v)
+    CreateSlider(page, "Aimbot Max Distance", 50, 3000, State.Sliders.AimbotMaxDistance, 9, function(v)
+        State.Sliders.AimbotMaxDistance = v
+    end)
+    CreateSlider(page, "Aimbot Hit Chance (%)", 1, 100, State.Sliders.AimbotHitChance, 10, function(v)
+        State.Sliders.AimbotHitChance = v
+    end)
+    CreateToggle(page, "Prediction", false, 11, function(v)
+        State.Features.AimbotPrediction = v
+    end, "AimbotPrediction")
+    CreateSlider(page, "Prediction Amount", 0, 0.5, State.Sliders.AimbotPredictionAmount, 12, function(v)
+        State.Sliders.AimbotPredictionAmount = v
+    end, 2)
+    CreateToggle(page, "Show FOV Circle", false, 13, function(v)
         State.Features.ShowFOV = v
     end, "ShowFOV", "Accent")
+
+    CreateToggle(page, "Enable Triggerbot", false, 14, function(v)
+        State.Features.Triggerbot = v
+    end, "Triggerbot", "AimTarget")
+    CreateToggle(page, "Triggerbot Always On", false, 15, function(v)
+        State.Features.TriggerbotAlwaysOn = v
+    end, "TriggerbotAlwaysOn")
+    CreateKeybind(page, "Triggerbot Activation Key", CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt, 16, function(newKey)
+        CONFIG.Keybinds.Triggerbot = newKey
+    end)
+    CreateToggle(page, "Only While Holding Mouse1", false, 17, function(v)
+        State.Features.TriggerbotOnlyWhileMouse1 = v
+    end, "TriggerbotOnlyWhileMouse1")
+    CreateToggle(page, "Triggerbot Team Check", true, 18, function(v)
+        State.Features.TriggerbotTeamCheck = v
+    end, "TriggerbotTeamCheck")
+    CreateToggle(page, "Triggerbot Wall Check", true, 19, function(v)
+        State.Features.TriggerbotWallCheck = v
+    end, "TriggerbotWallCheck")
+    CreateTriggerbotTargetDropdown(page)
+    CreateSlider(page, "Triggerbot FOV (pixels)", 2, 50, State.Sliders.TriggerbotFOV, 21, function(v)
+        State.Sliders.TriggerbotFOV = v
+    end)
+    CreateSlider(page, "Triggerbot Delay (sec)", 0, 0.5, State.Sliders.TriggerbotDelay, 22, function(v)
+        State.Sliders.TriggerbotDelay = v
+    end, 2)
+    CreateSlider(page, "Triggerbot Cooldown (sec)", 0.05, 1, State.Sliders.TriggerbotCooldown, 23, function(v)
+        State.Sliders.TriggerbotCooldown = v
+    end, 2)
+    CreateSlider(page, "Triggerbot Hit Chance (%)", 1, 100, State.Sliders.TriggerbotHitChance, 24, function(v)
+        State.Sliders.TriggerbotHitChance = v
+    end)
 end
 
-function State.FindDexExplorerGuis()
-    local found = {}
-    local seen = {}
-
-    local function consider(obj)
-        if not obj or seen[obj] then return end
-        local name = string.lower(obj.Name or "")
-        if name == "dex" or name == "dexexplorer" or name == "dex explorer" or name == "explorer" then
-            if obj:IsA("ScreenGui") then
-                seen[obj] = true
-                table.insert(found, obj)
-            end
-        end
-    end
-
-    for _, obj in ipairs(PlayerGui:GetChildren()) do
-        consider(obj)
-    end
-
-    return found
-end
-
-function State.SetDexExplorerEnabled(enabled)
-    local guis = State.FindDexExplorerGuis()
-    for _, gui in ipairs(guis) do
-        gui.Enabled = enabled
-    end
-
-    if enabled and #guis == 0 and Notify then
-        Notify("Dex Explorer", "No existing Dex Explorer GUI found.", true)
-    end
-end
 
 do
     local page = Pages.Movement
-    CreateSectionLabel(page, "Speed", 1)
     CreateSlider(page, "WalkSpeed", 16, 200, State.Sliders.WalkSpeed, 2, function(v)
         State.Sliders.WalkSpeed = v
         local hum = GetHumanoid()
@@ -3254,7 +3394,6 @@ do
         local hum = GetHumanoid()
         if hum then hum.JumpPower = v end
     end)
-    CreateSectionLabel(page, "Modifiers", 4)
     CreateToggle(page, "Infinite Jump", false, 5, function(v)
         State.Features.InfiniteJump = v
         if v then EnableInfiniteJump() else DisableInfiniteJump() end
@@ -3271,12 +3410,10 @@ do
         State.Features.Fly = v
         if v then EnableFly() else DisableFly() end
     end, "Fly")
-    CreateInfoLabel(page, "Bunny Hop automatically jumps when you touch the ground. Fly uses WASD + Space/Ctrl.", 9)
 end
 
 do
     local page = Pages.Player
-    CreateSectionLabel(page, "Character", 1)
     CreateToggle(page, "God Mode (client-only)", false, 2, function(v)
         State.Features.GodMode = v
         if v then EnableGodMode() else DisableGodMode() end
@@ -3300,12 +3437,10 @@ do
         if hrp and spawnPoint then hrp.CFrame = spawnPoint.CFrame + Vector3.new(0, 5, 0) end
     end, "TeleportSpawn")
     CreateActionButton(page, "Teleport to Freecam camera", 7, TeleportToFreecamCamera, "FreecamTeleport")
-    CreateInfoLabel(page, "Freecam freezes your character. Press RightCtrl to teleport to the camera position.", 8)
 end
 
 do
     local page = Pages.World
-    CreateSectionLabel(page, "Omgeving", 1)
     CreateSlider(page, "Time of day", 0, 24, State.Sliders.TimeOfDay, 2, function(v)
         State.Sliders.TimeOfDay = v
         Lighting.ClockTime = v
@@ -3324,13 +3459,22 @@ do
     end, "Fullbright")
 end
 
+LoadDex = function()
+    local dexUrl = "https://raw.githubusercontent.com/Babyhamsta/RBLX_Scripts/main/Universal/BypassedDarkDexV3.lua"
+    local ok, err = pcall(function()
+        loadstring(game:HttpGet(dexUrl))()
+    end)
+    if Notify then
+        Notify("Dex Explorer", ok and "Dex Explorer loaded." or ("Failed to load Dex Explorer: " .. tostring(err)), true)
+    end
+end
+
 local SetMiscWindowVisible
 local PlayerListGui, PlayerListWindow, PlayerListBody
 local ChatLogGui, ChatLogWindow, ChatLogBody
 local InventoryGui, InventoryWindow, InventoryBody
 do
     local page = Pages.Misc
-    CreateSectionLabel(page, "Utility windows", 1)
     CreateToggle(page, "Chat Log window", false, 2, function(v)
         State.Features.ChatLog = v
         if SetMiscWindowVisible and ChatLogWindow then SetMiscWindowVisible(ChatLogWindow, v) end
@@ -3352,11 +3496,7 @@ do
         State.Features.ToolViewer = v
         RefreshToolViewer()
     end, "ToolViewer")
-    CreateToggle(page, "Dex Explorer", false, 6, function(v)
-        State.Features.DexExplorer = v
-        State.SetDexExplorerEnabled(v)
-    end, "DexExplorer")
-    CreateInfoLabel(page, "Dex Explorer toggles an existing Dex/Dex Explorer ScreenGui in PlayerGui.", 7)
+    CreateActionButton(page, "Dex Explorer", 6, LoadDex)
 end
 
 local function MakeWindow(titleText, size, position, guiName)
@@ -3716,8 +3856,7 @@ end
 
 do
     local page = Pages.Settings
-    CreateSectionLabel(page, "Algemeen", 1)
-    CreateKeybind(page, "Menu Toggle Key", CONFIG.Keybinds.ToggleMenu, 2, function(newKey)
+    CreateKeybind(page, "Menu Toggle Key", CONFIG.Keybinds.ToggleMenu, 1, function(newKey)
         CONFIG.Keybinds.ToggleMenu = newKey
         pcall(function() ContextActionService:UnbindAction("BravoHack_MenuToggle") end)
         ContextActionService:BindActionAtPriority("BravoHack_MenuToggle", function(_, inputState)
@@ -3727,24 +3866,22 @@ do
             return Enum.ContextActionResult.Sink
         end, false, Enum.ContextActionPriority.High.Value, CONFIG.Keybinds.ToggleMenu)
     end)
-    CreateSlider(page, "UI Schaal", 0.7, 1.3, State.Sliders.UIScale, 3, function(v)
+    CreateSlider(page, "UI Scale", 0.7, 1.3, State.Sliders.UIScale, 2, function(v)
         State.Sliders.UIScale = v
         UIScaleInst.Scale = v
     end, 2)
 
-    CreateToggle(page, "Notifications", State.Features.Notifications, 4, function(v)
+    CreateToggle(page, "Notifications", State.Features.Notifications, 3, function(v)
         State.Features.Notifications = v
     end, "Notifications")
-    CreateToggle(page, "Hide Freecam bar", State.Features.HideFreecamBar, 5, function(v)
+    CreateToggle(page, "Hide Freecam Bar", State.Features.HideFreecamBar, 4, function(v)
         State.Features.HideFreecamBar = v
         if v then FreecamStatusLabel.Visible = false end
     end, "HideFreecamBar")
-    CreateInfoLabel(page, "Configure the menu, notifications and Freecam display here.", 6)
 
     CreateActionButton(page, "Save config", 10, function() SavedConfigs.Default = CaptureConfig() end, "SaveConfig")
     CreateActionButton(page, "Load config", 11, function() ApplyConfig(SavedConfigs.Default) end, "LoadConfig")
     CreateActionButton(page, "Uninject / Unload", 12, UnloadMenu, "UnloadMenu")
-    CreateSectionLabel(page, "Reset", 13)
     CreateActionButton(page, "Reset all settings", 14, function()
         for _, t in ipairs(ToggleRefs) do t.ref.SetState(t.default) end
         for _, sref in ipairs(SliderRefs) do sref.ref.Set(sref.default) end
@@ -3756,7 +3893,6 @@ do
         Lighting.OutdoorAmbient = Originals.OutdoorAmbient
         Lighting.GlobalShadows = Originals.GlobalShadows
     end, "ResetSettings")
-    CreateInfoLabel(page, "Feature keybinds start empty. Click the small key button on a feature to choose one.", 15)
 end
 
 local OpenMenu
@@ -3919,12 +4055,25 @@ do
 end
 
 RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Value + 1, function()
-    if not State.Features.AimAssist then return end
-    if not Camera then return end
-    if not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then return end
+    if not State.Features.Aimbot or not Camera then return end
+
+    local activationHeld
+    if State.Features.AimbotAlwaysOn then
+        activationHeld = true
+    elseif State.Features.AimbotUseCustomKey then
+        activationHeld = UserInputService:IsKeyDown(CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt)
+    else
+        activationHeld = UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+    end
+    if not activationHeld then return end
+
+    if State.Sliders.AimbotHitChance < 100 and math.random(1, 100) > State.Sliders.AimbotHitChance then
+        return
+    end
 
     local viewportCenter = Camera.ViewportSize / 2
     local nearestPart, nearestScreenDist = nil, math.huge
+    local nearestCharacter
 
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
@@ -3933,13 +4082,18 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
             local targetPart = GetAimTargetPart(char)
             local protected = IsProtectedPlayer(plr)
             local sameTeam = IsSameTeam(plr)
-            if humanoid and humanoid.Health > 0 and targetPart and not protected and not sameTeam and AimTargetVisible(targetPart) then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                if onScreen and screenPos.Z > 0 then
-                    local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - viewportCenter).Magnitude
-                    if screenDist <= State.Sliders.AimFOV and screenDist < nearestScreenDist then
-                        nearestPart = targetPart
-                        nearestScreenDist = screenDist
+            if humanoid and humanoid.Health > 0 and targetPart and not protected and (not State.Features.TeamCheck or not sameTeam) and AimTargetVisible(targetPart) then
+                local localRoot = char:FindFirstChild("HumanoidRootPart")
+                local distance = localRoot and (localRoot.Position - Camera.CFrame.Position).Magnitude or math.huge
+                if distance <= State.Sliders.AimbotMaxDistance then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                    if onScreen and screenPos.Z > 0 then
+                        local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - viewportCenter).Magnitude
+                        if screenDist <= State.Sliders.AimFOV and screenDist < nearestScreenDist then
+                            nearestPart = targetPart
+                            nearestScreenDist = screenDist
+                            nearestCharacter = char
+                        end
                     end
                 end
             end
@@ -3947,9 +4101,88 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
     end
 
     if nearestPart then
-        local targetCFrame = CFrame.new(Camera.CFrame.Position, nearestPart.Position)
+        local aimPosition = nearestPart.Position
+        if State.Features.AimbotPrediction then
+            local velocity = nearestPart.AssemblyLinearVelocity
+            aimPosition = aimPosition + velocity * State.Sliders.AimbotPredictionAmount
+        end
+        local targetCFrame = CFrame.new(Camera.CFrame.Position, aimPosition)
         Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, State.Sliders.AimSmoothness)
     end
+end)
+
+local function PerformTriggerClick()
+    if typeof(mouse1click) == "function" then
+        local ok = pcall(mouse1click)
+        if ok then return true end
+    end
+
+    local ok = pcall(function()
+        local vim = game:GetService("VirtualInputManager")
+        local mousePos = UserInputService:GetMouseLocation()
+        vim:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, true, game, 0)
+        vim:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, false, game, 0)
+    end)
+    return ok
+end
+
+local triggerPending = false
+local triggerLastClick = 0
+local triggerTargetPlayer = nil
+
+RunService:BindToRenderStep("BravoHackTriggerbot", Enum.RenderPriority.Camera.Value + 2, function()
+    if not State.Features.Triggerbot or not Camera then return end
+    if State.Features.TriggerbotOnlyWhileMouse1 and not UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) then return end
+    if not State.Features.TriggerbotAlwaysOn and not UserInputService:IsKeyDown(CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt) then return end
+
+    if os.clock() - triggerLastClick < State.Sliders.TriggerbotCooldown then return end
+
+    local mousePos = UserInputService:GetMouseLocation()
+    local guiInset = game:GetService("GuiService"):GetGuiInset()
+    local viewportMouse = mousePos - guiInset
+    local bestPart, bestDistance, bestPlayer = nil, math.huge, nil
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local char = plr.Character
+            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+            local targetPart = GetAimTargetPart(char, State.TriggerbotTargetPart)
+            local protected = IsProtectedPlayer(plr)
+            local sameTeam = IsSameTeam(plr)
+            if humanoid and humanoid.Health > 0 and targetPart and not protected and (not State.Features.TriggerbotTeamCheck or not sameTeam) then
+                if not State.Features.TriggerbotWallCheck or AimTargetVisible(targetPart, true) then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                    if onScreen and screenPos.Z > 0 then
+                        local screenDistance = (Vector2.new(screenPos.X, screenPos.Y) - Vector2.new(viewportMouse.X, viewportMouse.Y)).Magnitude
+                        if screenDistance <= State.Sliders.TriggerbotFOV and screenDistance < bestDistance then
+                            bestPart = targetPart
+                            bestDistance = screenDistance
+                            bestPlayer = plr
+                        end
+                    end
+                end
+            end
+        end
+    end
+
+    if not bestPart or triggerPending then
+        triggerTargetPlayer = bestPlayer
+        return
+    end
+
+    if State.Sliders.TriggerbotHitChance < 100 and math.random(1, 100) > State.Sliders.TriggerbotHitChance then
+        return
+    end
+
+    triggerPending = true
+    triggerTargetPlayer = bestPlayer
+    local expectedTarget = bestPlayer
+    task.delay(State.Sliders.TriggerbotDelay, function()
+        triggerPending = false
+        if not State.Features.Triggerbot or not expectedTarget or expectedTarget ~= triggerTargetPlayer then return end
+        triggerLastClick = os.clock()
+        PerformTriggerClick()
+    end)
 end)
 
 local fpsAccum, fpsFrames = 0, 0
@@ -4196,4 +4429,4 @@ if LocalPlayer.Character then
     task.spawn(OnCharacterAdded, LocalPlayer.Character)
 end
 
-print("[BravoHack] Loaded. Press "..CONFIG.Keybinds.ToggleMenu.Name.." om het menu te openen.")
+print("[BravoHack] Loaded. Press "..CONFIG.Keybinds.ToggleMenu.Name.." to open the menu.")
