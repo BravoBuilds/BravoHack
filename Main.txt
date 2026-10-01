@@ -4221,7 +4221,7 @@ end
 local Unloaded = false
 
 local function CaptureConfig()
-    local cfg = { Keybinds = {}, Sliders = {}, Features = {}, AimTargetPart = State.AimTargetPart, ProtectedPlayers = {} }
+    local cfg = { Keybinds = {}, Sliders = {}, Features = {}, AimTargetPart = State.AimTargetPart, TriggerbotTargetPart = State.TriggerbotTargetPart, ProtectedPlayers = {} }
     for userId, enabled in pairs(State.ProtectedPlayers) do
         cfg.ProtectedPlayers[userId] = enabled
     end
@@ -4247,6 +4247,7 @@ local function ApplyConfig(cfg)
         State.Features[k] = v
     end
     if cfg.AimTargetPart then State.AimTargetPart = cfg.AimTargetPart end
+    if cfg.TriggerbotTargetPart then State.TriggerbotTargetPart = cfg.TriggerbotTargetPart end
     State.ProtectedPlayers = {}
     for userId, enabled in pairs(cfg.ProtectedPlayers or {}) do
         if enabled then State.ProtectedPlayers[tonumber(userId) or userId] = true end
@@ -4420,7 +4421,7 @@ do
         ConfigStore.SaveMeta()
         if UI.ConfigNameInput then UI.ConfigNameInput.Text = name end
         if UI.ConfigSelectedLabel then UI.ConfigSelectedLabel.Text = "Selected: " .. name end
-        if Notify then Notify("Configuration", ok and ("Saved "" .. name .. "".") or message, true) end
+        if Notify then Notify("Configuration", ok and ("Saved \"" .. name .. "\".") or message, true) end
         RefreshConfigList()
     end, "SaveConfig")
 
@@ -4430,10 +4431,10 @@ do
         if cfg then
             SavedConfigs[name] = cfg
             ApplyConfig(cfg)
-            if Notify then Notify("Configuration", "Loaded "" .. name .. "".", true) end
+            if Notify then Notify("Configuration", "Loaded \"" .. name .. "\".", true) end
         elseif SavedConfigs[name] then
             ApplyConfig(SavedConfigs[name])
-            if Notify then Notify("Configuration", "Loaded the session config "" .. name .. "".", true) end
+            if Notify then Notify("Configuration", "Loaded the session config \"" .. name .. "\".", true) end
         elseif Notify then
             Notify("Configuration", message or "No config found.", true)
         end
@@ -4451,7 +4452,7 @@ do
         ConfigStore.SaveMeta()
         if UI.ConfigNameInput then UI.ConfigNameInput.Text = State.ConfigSelectedName end
         if UI.ConfigSelectedLabel then UI.ConfigSelectedLabel.Text = "Selected: " .. State.ConfigSelectedName end
-        if Notify then Notify("Configuration", ok and ("Deleted "" .. name .. "".") or "Could not delete that config.", true) end
+        if Notify then Notify("Configuration", ok and ("Deleted \"" .. name .. "\".") or "Could not delete that config.", true) end
         RefreshConfigList()
     end)
 
@@ -4485,7 +4486,11 @@ do
         Lighting.ClockTime = Originals.ClockTime
         Lighting.OutdoorAmbient = Originals.OutdoorAmbient
         Lighting.GlobalShadows = Originals.GlobalShadows
-        State.Features.AutoRememberKey = false
+        for _, t in ipairs(ToggleRefs) do
+            if t.name == "Auto Remember Key" then
+                t.ref.SetState(false)
+            end
+        end
         pcall(function() ConfigStore.ClearRememberedKey() end)
         pcall(function() ConfigStore.SaveMeta() end)
     end, "ResetSettings")
@@ -4819,7 +4824,7 @@ end
 State.SilentAimHook = State.SilentAimHook or {Installed = false, Old = nil}
 
 local function IsSilentAimRemote(remote)
-    if not remote or not remote:IsA("Instance") then return false end
+    if typeof(remote) ~= "Instance" then return false end
     if not (remote:IsA("RemoteEvent") or remote.ClassName == "UnreliableRemoteEvent") then return false end
     local name = remote.Name:lower()
     for _, token in ipairs({"shoot","fire","attack","hit","damage","bullet","weapon","gun","ray","projectile"}) do
