@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+<rect width="1200" height="720" fill="#0b0d12"/>
+<rect x="120" y="70" width="960" height="580" rx="18" fill="#14161b" stroke="#34363e"/>
+<text x="150" y="112" fill="#f1f2f5" font-family="Arial" font-size="22" font-weight="700">BravoHack • Lua</text>
+<rect x="150" y="145" width="900" height="52" rx="9" fill="#1b1e25"/>
+<text x="175" y="177" fill="#aeb3bd" font-family="Arial" font-size="14">GitHub module folder: Lua's</text>
+<rect x="150" y="220" width="560" height="310" rx="10" fill="#101216" stroke="#34363e"/>
+<g font-family="Arial" font-size="14"><text x="175" y="253" fill="#f1f2f5" font-weight="700">Available modules</text>
+<rect x="175" y="275" width="510" height="48" rx="7" fill="#1c2028"/><text x="195" y="305" fill="#f1f2f5">InventoryView.lua</text>
+<rect x="175" y="335" width="510" height="48" rx="7" fill="#1c2028"/><text x="195" y="365" fill="#7e8490">YourModule.lua</text>
+<rect x="175" y="395" width="510" height="48" rx="7" fill="#1c2028"/><text x="195" y="425" fill="#7e8490">Example.lua</text></g>
+<rect x="740" y="220" width="270" height="310" rx="10" fill="#101216" stroke="#34363e"/>
+<g font-family="Arial" font-size="13"><rect x="765" y="255" width="220" height="42" rx="7" fill="#0069ff"/><text x="875" y="282" text-anchor="middle" fill="white" font-weight="700">Run Selected Lua</text>
+<rect x="765" y="310" width="220" height="42" rx="7" fill="#1b1e25" stroke="#34363e"/><text x="875" y="337" text-anchor="middle" fill="#f1f2f5">Refresh Modules</text>
+<rect x="765" y="365" width="220" height="42" rx="7" fill="#1b1e25" stroke="#34363e"/><text x="875" y="392" text-anchor="middle" fill="#f1f2f5">Open Lua Folder</text>
+<text x="765" y="445" fill="#7e8490">Modules are fetched from</text><text x="765" y="466" fill="#7e8490">the configured GitHub folder.</text></g>
+<text x="150" y="600" fill="#7e8490" font-family="Arial" font-size="12">Documentation visual — not a captured runtime screenshot.</text>
+</svg>
