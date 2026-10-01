@@ -1,5 +1,5 @@
--- BravoHack v1.0.5
--- Added persistent key remember, named config profiles, auto-load, triggerbot fixes, and silent aim support.
+-- BravoHack v1.0.6
+-- Expanded Aimbot FOV, improved Triggerbot targeting, and added GitHub Lua modules.
 
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
@@ -104,6 +104,7 @@ local State = {
         TriggerbotOnlyWhileMouse1 = false,
         TriggerbotTeamCheck = true,
         TriggerbotWallCheck = true,
+        TriggerbotUseCrosshair = true,
         ShowFOV = false,
         InfiniteJump = false,
         BunnyHop = false,
@@ -132,16 +133,16 @@ local State = {
     },
     Sliders = {
         ESPDistance = 300,
-        AimFOV = 220,
+        AimFOV = 350,
         AimSmoothness = 0.25,
         AimbotMaxDistance = 1000,
         AimbotHitChance = 100,
         AimbotPredictionAmount = 0.12,
-        TriggerbotFOV = 45,
+        TriggerbotFOV = 60,
         TriggerbotDelay = 0.05,
         TriggerbotCooldown = 0.12,
         TriggerbotHitChance = 100,
-        SilentAimFOV = 220,
+        SilentAimFOV = 350,
         SilentAimHitChance = 100,
         SilentAimPredictionAmount = 0.12,
         WalkSpeed = 16,
@@ -3497,7 +3498,7 @@ do
     CreateToggle(page, "Wall Check", false, 8, function(v)
         State.Features.WallCheck = v
     end, "WallCheck")
-    CreateSlider(page, "Aimbot FOV (pixels)", 20, 400, State.Sliders.AimFOV, 9, function(v)
+    CreateSlider(page, "Aimbot FOV (pixels)", 20, 1000, State.Sliders.AimFOV, 9, function(v)
         State.Sliders.AimFOV = v
     end)
     CreateSlider(page, "Aimbot Smoothness", 0.05, 1, State.Sliders.AimSmoothness, 10, function(v)
@@ -3538,9 +3539,12 @@ do
     CreateToggle(page, "Triggerbot Wall Check", true, 22, function(v)
         State.Features.TriggerbotWallCheck = v
     end, "TriggerbotWallCheck")
+    CreateToggle(page, "Use Crosshair", true, 23, function(v)
+        State.Features.TriggerbotUseCrosshair = v
+    end, "TriggerbotUseCrosshair")
     local triggerDropdownRow = CreateTriggerbotTargetDropdown(page)
     triggerDropdownRow.LayoutOrder = 23
-    CreateSlider(page, "Triggerbot FOV (pixels)", 5, 100, State.Sliders.TriggerbotFOV, 24, function(v)
+    CreateSlider(page, "Triggerbot FOV (pixels)", 5, 300, State.Sliders.TriggerbotFOV, 24, function(v)
         State.Sliders.TriggerbotFOV = v
     end)
     CreateSlider(page, "Triggerbot Delay (sec)", 0, 0.5, State.Sliders.TriggerbotDelay, 25, function(v)
@@ -3566,7 +3570,7 @@ do
     CreateToggle(page, "Silent Aim Prediction", false, 32, function(v)
         State.Features.SilentAimPrediction = v
     end, "SilentAimPrediction")
-    CreateSlider(page, "Silent Aim FOV (pixels)", 20, 500, State.Sliders.SilentAimFOV, 33, function(v)
+    CreateSlider(page, "Silent Aim FOV (pixels)", 20, 1000, State.Sliders.SilentAimFOV, 33, function(v)
         State.Sliders.SilentAimFOV = v
     end)
     CreateSlider(page, "Silent Aim Hit Chance (%)", 1, 100, State.Sliders.SilentAimHitChance, 34, function(v)
@@ -3658,6 +3662,226 @@ do
     end, "Fullbright")
 end
 
+
+do
+    UI.LuaRunner = UI.LuaRunner or {}
+    UI.LuaRunner.Files = {}
+    UI.LuaRunner.Selected = nil
+    UI.LuaRunner.Guis = {}
+
+    UI.LuaFolderURL = "https://api.github.com/repos/BravoBuilds/BravoHack/contents/Lua%27s?ref=main"
+
+    local env = type(getgenv) == "function" and getgenv() or _G
+    env.BravoHackAPI = env.BravoHackAPI or {}
+    env.BravoHackAPI.State = State
+    env.BravoHackAPI.UI = UI
+    env.BravoHackAPI.Config = CONFIG
+    env.BravoHackAPI.Notify = function(title, body)
+        if Notify then Notify(title, body, true) end
+    end
+    env.BravoHackAPI.RegisterLuaGui = function(name, gui)
+        if name and gui then UI.LuaRunner.Guis[name] = gui end
+    end
+    env.BravoHackAPI.CloseLuaGui = function(name)
+        local gui = UI.LuaRunner.Guis[name]
+        if gui then
+            pcall(function() gui:Destroy() end)
+            UI.LuaRunner.Guis[name] = nil
+        end
+        local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if pg then
+            local existing = pg:FindFirstChild(name)
+            if existing then pcall(function() existing:Destroy() end) end
+        end
+    end
+
+    UI.LuaRunner.Refresh = function()
+        local ok, body = pcall(function()
+            return game:HttpGet(UI.LuaFolderURL, true)
+        end)
+        if not ok or type(body) ~= "string" then
+            if Notify then Notify("Lua", "Could not load the Lua folder.", true) end
+            return false
+        end
+
+        local decodeOk, data = pcall(function()
+            return game:GetService("HttpService"):JSONDecode(body)
+        end)
+        if not decodeOk or type(data) ~= "table" then
+            if Notify then Notify("Lua", "Invalid Lua folder response.", true) end
+            return false
+        end
+
+        UI.LuaRunner.Files = {}
+        for _, item in ipairs(data) do
+            if type(item) == "table" and item.type == "file" and type(item.name) == "string"
+                and item.name:lower():sub(-4) == ".lua" and type(item.download_url) == "string" then
+                UI.LuaRunner.Files[#UI.LuaRunner.Files + 1] = item
+            end
+        end
+
+        table.sort(UI.LuaRunner.Files, function(a, b)
+            return a.name:lower() < b.name:lower()
+        end)
+
+        if UI.LuaRunner.List then
+            for _, child in ipairs(UI.LuaRunner.List:GetChildren()) do
+                if child:IsA("TextButton") then child:Destroy() end
+            end
+
+            for _, item in ipairs(UI.LuaRunner.Files) do
+                local button = Instance.new("TextButton")
+                button.Size = UDim2.new(1, -8, 0, 30)
+                button.BackgroundColor3 = item.name == UI.LuaRunner.Selected and Color3.fromRGB(32, 34, 40) or Color3.fromRGB(27, 27, 31)
+                button.BorderSizePixel = 0
+                button.Font = Enum.Font.GothamMedium
+                button.TextSize = 11
+                button.TextColor3 = CONFIG.Colors.Text
+                button.TextXAlignment = Enum.TextXAlignment.Left
+                button.Text = "  " .. item.name
+                button.AutoButtonColor = false
+                button.Parent = UI.LuaRunner.List
+                NewCorner(4, button)
+                button.MouseButton1Click:Connect(function()
+                    UI.LuaRunner.Selected = item.name
+                    if UI.LuaRunner.Status then
+                        UI.LuaRunner.Status.Text = "Selected: " .. item.name
+                    end
+                    UI.LuaRunner.Refresh()
+                end)
+            end
+        end
+
+        if Notify then Notify("Lua", tostring(#UI.LuaRunner.Files) .. " Lua module(s) found.", true) end
+        return true
+    end
+
+    UI.LuaRunner.RunSelected = function()
+        local selected
+        for _, item in ipairs(UI.LuaRunner.Files) do
+            if item.name == UI.LuaRunner.Selected then
+                selected = item
+                break
+            end
+        end
+
+        if not selected then
+            if Notify then Notify("Lua", "Select a Lua module first.", true) end
+            return false
+        end
+
+        local ok, source = pcall(function()
+            return game:HttpGet(selected.download_url, true)
+        end)
+        if not ok or type(source) ~= "string" or source == "" then
+            if Notify then Notify("Lua", "Could not download " .. selected.name .. ".", true) end
+            return false
+        end
+
+        if type(loadstring) ~= "function" then
+            if Notify then Notify("Lua", "loadstring is unavailable in this executor.", true) end
+            return false
+        end
+
+        local compileOk, chunk = pcall(loadstring, source)
+        if not compileOk or type(chunk) ~= "function" then
+            if Notify then Notify("Lua", "Compile error: " .. tostring(chunk), true) end
+            return false
+        end
+
+        local runOk, err = pcall(chunk)
+        if Notify then
+            Notify("Lua", runOk and ("Ran " .. selected.name .. ".") or ("Run error in " .. selected.name .. ": " .. tostring(err)), true)
+        end
+        return runOk
+    end
+
+    UI.LuaRunner.CloseAll = function()
+        for name, gui in pairs(UI.LuaRunner.Guis) do
+            pcall(function()
+                if gui and gui.Parent then gui:Destroy() end
+            end)
+            UI.LuaRunner.Guis[name] = nil
+        end
+        pcall(function()
+            local pg = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+            if pg then
+                local inventoryGui = pg:FindFirstChild("BravoHackInventoryLua")
+                if inventoryGui then inventoryGui:Destroy() end
+            end
+        end)
+    end
+end
+
+do
+    local page = Pages.Lua
+    CreateSectionLabel(page, "Lua Modules", 1)
+
+    local info = Instance.new("TextLabel")
+    info.Size = UDim2.new(1, 0, 0, 42)
+    info.BackgroundTransparency = 1
+    info.Font = Enum.Font.Gotham
+    info.TextSize = 11
+    info.TextColor3 = CONFIG.Colors.SubText
+    info.TextWrapped = true
+    info.TextXAlignment = Enum.TextXAlignment.Left
+    info.Text = "Modules are loaded from BravoHack/Lua's. Add a .lua file in GitHub, press Refresh, select it, then run it."
+    info.LayoutOrder = 2
+    info.Parent = page
+
+    UI.LuaRunner.Status = Instance.new("TextLabel")
+    UI.LuaRunner.Status.Size = UDim2.new(1, 0, 0, 24)
+    UI.LuaRunner.Status.BackgroundTransparency = 1
+    UI.LuaRunner.Status.Font = Enum.Font.GothamMedium
+    UI.LuaRunner.Status.TextSize = 11
+    UI.LuaRunner.Status.TextColor3 = CONFIG.Colors.SubText
+    UI.LuaRunner.Status.TextXAlignment = Enum.TextXAlignment.Left
+    UI.LuaRunner.Status.Text = "Selected: none"
+    UI.LuaRunner.Status.LayoutOrder = 3
+    UI.LuaRunner.Status.Parent = page
+
+    UI.LuaRunner.List = Instance.new("ScrollingFrame")
+    UI.LuaRunner.List.Size = UDim2.new(1, 0, 0, 180)
+    UI.LuaRunner.List.BackgroundColor3 = CONFIG.Colors.Panel
+    UI.LuaRunner.List.BackgroundTransparency = 0.08
+    UI.LuaRunner.List.BorderSizePixel = 0
+    UI.LuaRunner.List.ScrollBarThickness = 4
+    UI.LuaRunner.List.ScrollBarImageColor3 = CONFIG.Colors.Accent
+    UI.LuaRunner.List.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    UI.LuaRunner.List.CanvasSize = UDim2.new()
+    UI.LuaRunner.List.LayoutOrder = 4
+    UI.LuaRunner.List.Parent = page
+    NewCorner(5, UI.LuaRunner.List)
+    NewStroke(UI.LuaRunner.List, CONFIG.Colors.Stroke, 1, 0.45)
+
+    UI.LuaRunner.Layout = Instance.new("UIListLayout")
+    UI.LuaRunner.Layout.Padding = UDim.new(0, 3)
+    UI.LuaRunner.Layout.Parent = UI.LuaRunner.List
+
+    CreateActionButton(page, "Refresh Lua modules", 5, function()
+        UI.LuaRunner.Refresh()
+    end)
+
+    CreateActionButton(page, "Run selected Lua", 6, function()
+        UI.LuaRunner.RunSelected()
+    end)
+
+    CreateActionButton(page, "Run Inventory View module", 7, function()
+        UI.LuaRunner.Selected = "InventoryView.lua"
+        UI.LuaRunner.RunSelected()
+    end)
+
+    CreateActionButton(page, "Open Lua folder", 8, function()
+        pcall(function()
+            game:GetService("GuiService"):OpenBrowserWindow("https://github.com/BravoBuilds/BravoHack/tree/main/Lua%27s")
+        end)
+    end)
+
+    task.defer(function()
+        UI.LuaRunner.Refresh()
+    end)
+end
+
 LoadDex = function()
     local dexUrl = "https://raw.githubusercontent.com/Babyhamsta/RBLX_Scripts/main/Universal/BypassedDarkDexV3.lua"
     local ok, err = pcall(function()
@@ -3684,11 +3908,6 @@ do
         if MiscUI.PlayerListFrame then MiscUI.PlayerListFrame.Visible = v end
         if v then RefreshPlayerListUI() end
     end, "PlayerList")
-    CreateToggle(page, "Inventory View window", false, 4, function(v)
-        State.Features.InventoryView = v
-        if SetMiscWindowVisible and UI.InventoryWindow then SetMiscWindowVisible(UI.InventoryWindow, v) end
-        State.UpdateInventoryView()
-    end, "InventoryView")
     CreateToggle(page, "Tool Viewer (through walls)", false, 5, function(v)
         State.Features.ToolViewer = v
         RefreshToolViewer()
@@ -3987,7 +4206,7 @@ pcall(RefreshToolViewer)
 SavedConfigs, ConfigStore = {}, {
     Root = "BravoHack",
     Configs = "BravoHack/Configs",
-    Version = "v1.0.5",
+    Version = "v1.0.6",
     KeyFile = "BravoHack/key.json",
     MetaFile = "BravoHack/settings.json",
 }
@@ -4285,6 +4504,7 @@ local function UnloadMenu()
     pcall(function() if FreecamStatusLabel then FreecamStatusLabel:Destroy() end end)
     pcall(function() for plr in pairs(ToolViewerObjects) do RemoveToolViewerForPlayer(plr) end end)
     pcall(function() RestoreSilentAimHook() end)
+    pcall(function() if UI.LuaRunner and UI.LuaRunner.CloseAll then UI.LuaRunner.CloseAll() end end)
     pcall(function() State.StopSpectatingSelectedPlayer() end)
     pcall(function() DisableFreecam() end)
     pcall(function() DisableForceField() end)
@@ -4711,7 +4931,7 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
         return
     end
 
-    local viewportCenter = UserInputService:GetMouseLocation()
+    local viewportCenter = Camera.ViewportSize / 2
     local nearestPart, nearestScreenDist = nil, math.huge
     local nearestCharacter
 
@@ -4792,7 +5012,7 @@ local function GetSilentAimTarget()
     Camera = Workspace.CurrentCamera or Camera
     if not Camera then return nil end
 
-    local mousePos = UserInputService:GetMouseLocation()
+    local mousePos = Camera.ViewportSize / 2
     local bestPart, bestDistance = nil, math.huge
 
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -4906,6 +5126,7 @@ local triggerTargetPlayer = nil
 RunService:BindToRenderStep("BravoHackTriggerbot", Enum.RenderPriority.Camera.Value + 2, function()
     Camera = Workspace.CurrentCamera or Camera
     if not State.Features.Triggerbot or not Camera then return end
+    if UserInputService:GetFocusedTextBox() then return end
     local lmbHeld = State.Input.LMB
     local triggerKeyHeld = State.Input.TriggerbotKey
     pcall(function() lmbHeld = lmbHeld or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) end)
@@ -4915,7 +5136,12 @@ RunService:BindToRenderStep("BravoHackTriggerbot", Enum.RenderPriority.Camera.Va
 
     if os.clock() - triggerLastClick < State.Sliders.TriggerbotCooldown then return end
 
-    local viewportMouse = UserInputService:GetMouseLocation()
+    local viewportMouse
+    if State.Features.TriggerbotUseCrosshair then
+        viewportMouse = Camera.ViewportSize / 2
+    else
+        viewportMouse = UserInputService:GetMouseLocation() - game:GetService("GuiService"):GetGuiInset()
+    end
     local bestPart, bestDistance, bestPlayer = nil, math.huge, nil
 
     for _, plr in ipairs(Players:GetPlayers()) do
