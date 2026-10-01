@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+<defs><linearGradient id="bg" x1="0" x2="1"><stop stop-color="#0b0d12"/><stop offset="1" stop-color="#151923"/></linearGradient></defs>
+<rect width="1200" height="720" fill="url(#bg)"/>
+<rect x="120" y="70" width="960" height="580" rx="18" fill="#14161b" stroke="#34363e"/>
+<rect x="120" y="70" width="960" height="58" rx="18" fill="#101216"/>
+<text x="150" y="106" fill="#f1f2f5" font-family="Arial" font-size="22" font-weight="700">BravoHack</text>
+<text x="1010" y="106" fill="#7e8490" text-anchor="end" font-family="Arial" font-size="14">v1.0.6</text>
+<g font-family="Arial" font-size="14" fill="#aeb3bd">
+<text x="160" y="162">Visuals</text><text x="250" y="162">Combat</text><text x="335" y="162">Movement</text><text x="455" y="162">Player</text><text x="525" y="162">World</text><text x="600" y="162">Misc</text><text x="665" y="162">Lua</text><text x="710" y="162">Settings</text>
+</g>
+<rect x="150" y="185" width="900" height="1" fill="#34363e"/>
+<text x="160" y="225" fill="#f1f2f5" font-family="Arial" font-size="19" font-weight="700">Visuals</text>
+<g font-family="Arial">
+<rect x="160" y="250" width="270" height="62" rx="10" fill="#1b1e25" stroke="#34363e"/><text x="180" y="277" fill="#f1f2f5" font-size="14">ESP</text><text x="180" y="298" fill="#7e8490" font-size="12">Player highlighting</text>
+<rect x="450" y="250" width="270" height="62" rx="10" fill="#1b1e25" stroke="#34363e"/><text x="470" y="277" fill="#f1f2f5" font-size="14">Chams</text><text x="470" y="298" fill="#7e8490" font-size="12">Character overlays</text>
+<rect x="740" y="250" width="270" height="62" rx="10" fill="#1b1e25" stroke="#34363e"/><text x="760" y="277" fill="#f1f2f5" font-size="14">FOV</text><text x="760" y="298" fill="#7e8490" font-size="12">Configurable aim area</text>
+<rect x="160" y="335" width="850" height="250" rx="12" fill="#101216" stroke="#34363e"/>
+<text x="185" y="372" fill="#f1f2f5" font-size="15" font-weight="700">Preview</text>
+<circle cx="585" cy="455" r="82" fill="none" stroke="#0069ff" stroke-width="2" opacity=".8"/>
+<circle cx="585" cy="455" r="5" fill="#ff5060"/>
+<text x="585" y="575" text-anchor="middle" fill="#7e8490" font-size="12">Interface preview / documentation mockup</text>
+</g></svg>
