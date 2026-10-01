@@ -1,5 +1,5 @@
--- BravoHack v1.0.4
--- Added executor-side persistent config storage.
+-- BravoHack v1.0.5
+-- Added persistent key remember, named config profiles, auto-load, triggerbot fixes, and silent aim support.
 
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
@@ -118,7 +118,13 @@ local State = {
         InventoryView = false,
         ToolViewer = false,
         Spectate = false,
-        Notifications = true,
+            Notifications = true,
+        AutoRememberKey = true,
+        AutoLoadConfig = false,
+        SilentAim = false,
+        SilentAimTeamCheck = false,
+        SilentAimWallCheck = false,
+        SilentAimPrediction = false,
         ForceField = false,
         HideFreecamBar = false,
         TeamCheck = false,
@@ -135,6 +141,9 @@ local State = {
         TriggerbotDelay = 0.05,
         TriggerbotCooldown = 0.12,
         TriggerbotHitChance = 100,
+        SilentAimFOV = 220,
+        SilentAimHitChance = 100,
+        SilentAimPredictionAmount = 0.12,
         WalkSpeed = 16,
         JumpPower = 50,
         CameraFOV = 70,
@@ -147,6 +156,7 @@ local State = {
     SelectedPlayer = nil,
     AimTargetPart = "Head",
     TriggerbotTargetPart = "Head",
+    ConfigSelectedName = "Default",
     PlayerActionExpanded = nil,
     ProtectedPlayers = {},
     ChatMessages = {},
@@ -356,6 +366,8 @@ KeyGate.Status.Parent = KeyGate.Frame
 
 local SubmitKey
 local KeyGateBusy = false
+local RunAutoLoadConfig
+local SavedConfigs, ConfigStore
 
 UI.MainFrame = Instance.new("Frame")
 UI.MainFrame.Name = "MainFrame"
@@ -523,6 +535,51 @@ KeyGate.SourceURL = "https://raw.githubusercontent.com/BravoBuilds/BravoHack/ref
 KeyGate.ValidKeys = { BRAVOONTOP = true }
 KeyGate.KeysLoaded = false
 
+local function LoadPersistentSettings()
+    if type(isfile) ~= "function" or type(readfile) ~= "function" then return end
+    local path = "BravoHack/settings.json"
+    if not isfile(path) then return end
+    local ok, raw = pcall(readfile, path)
+    if not ok or type(raw) ~= "string" or raw == "" then return end
+    local decodeOk, data = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(raw)
+    end)
+    if not decodeOk or type(data) ~= "table" then return end
+    if type(data.AutoRememberKey) == "boolean" then State.Features.AutoRememberKey = data.AutoRememberKey end
+    if type(data.AutoLoadConfig) == "boolean" then State.Features.AutoLoadConfig = data.AutoLoadConfig end
+    if type(data.ConfigSelectedName) == "string" and data.ConfigSelectedName ~= "" then
+        State.ConfigSelectedName = data.ConfigSelectedName
+    end
+end
+
+local function LoadRememberedKey()
+    if not State.Features.AutoRememberKey then return nil end
+    if type(isfile) ~= "function" or type(readfile) ~= "function" then return nil end
+    local path = "BravoHack/key.json"
+    if not isfile(path) then return nil end
+    local ok, raw = pcall(readfile, path)
+    if not ok or type(raw) ~= "string" or raw == "" then return nil end
+    local decodeOk, data = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(raw)
+    end)
+    if decodeOk and type(data) == "table" and type(data.Key) == "string" then
+        return data.Key:gsub("%s+", ""):upper()
+    end
+    return nil
+end
+
+local function ClearRememberedKeyFile()
+    for _, fnName in ipairs({"delfile", "removefile"}) do
+        local fn = _G[fnName]
+        if type(fn) == "function" then
+            pcall(function() fn("BravoHack/key.json") end)
+            return
+        end
+    end
+end
+
+LoadPersistentSettings()
+
 local function SetKeyGateVisible(visible)
     if KeyGate.Gui and KeyGate.Gui.Parent then
         KeyGate.Gui.Enabled = visible
@@ -612,6 +669,11 @@ local function OpenAuthorizedMenu()
         UI.StatusLabel.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name
     end
     SetKeyGateVisible(false)
+    task.defer(function()
+        if RunAutoLoadConfig then
+            pcall(RunAutoLoadConfig)
+        end
+    end)
 end
 
 KeyGate.InteractionBusy = false
@@ -654,6 +716,11 @@ SubmitKey = function()
     KeyGate.Status.Text = "Access granted."
     KeyGate.Status.TextColor3 = CONFIG.Colors.Green
     KeyGate.Button.Text = "Unlocked"
+    if State.Features.AutoRememberKey and ConfigStore and ConfigStore.SaveRememberedKey then
+        pcall(function() ConfigStore.SaveRememberedKey(key) end)
+    else
+        pcall(ClearRememberedKeyFile)
+    end
     OpenAuthorizedMenu()
 
     task.defer(function()
@@ -747,7 +814,19 @@ end
 ConnectOnce(KeyGate.UninjectButton, UninjectFromKeyGate)
 
 task.spawn(function()
-    LoadKeysFromURL()
+    local loaded = LoadKeysFromURL()
+    if loaded and State.Features.AutoRememberKey then
+        local remembered = LoadRememberedKey()
+        if remembered then
+            if KeyGate.ValidKeys[remembered] == true then
+                KeyGate.Input.Text = remembered
+                KeyGate.Status.Text = "Remembered key accepted."
+                OpenAuthorizedMenu()
+            else
+                ClearRememberedKeyFile()
+            end
+        end
+    end
 end)
 
 task.spawn(function()
@@ -3473,6 +3552,29 @@ do
     CreateSlider(page, "Triggerbot Hit Chance (%)", 1, 100, State.Sliders.TriggerbotHitChance, 27, function(v)
         State.Sliders.TriggerbotHitChance = v
     end)
+
+    CreateSectionLabel(page, "Silent Aim", 28)
+    CreateToggle(page, "Enable Silent Aim", false, 29, function(v)
+        State.Features.SilentAim = v
+    end, "SilentAim")
+    CreateToggle(page, "Silent Aim Team Check", false, 30, function(v)
+        State.Features.SilentAimTeamCheck = v
+    end, "SilentAimTeamCheck")
+    CreateToggle(page, "Silent Aim Wall Check", false, 31, function(v)
+        State.Features.SilentAimWallCheck = v
+    end, "SilentAimWallCheck")
+    CreateToggle(page, "Silent Aim Prediction", false, 32, function(v)
+        State.Features.SilentAimPrediction = v
+    end, "SilentAimPrediction")
+    CreateSlider(page, "Silent Aim FOV (pixels)", 20, 500, State.Sliders.SilentAimFOV, 33, function(v)
+        State.Sliders.SilentAimFOV = v
+    end)
+    CreateSlider(page, "Silent Aim Hit Chance (%)", 1, 100, State.Sliders.SilentAimHitChance, 34, function(v)
+        State.Sliders.SilentAimHitChance = v
+    end)
+    CreateSlider(page, "Silent Aim Prediction Amount", 0, 0.5, State.Sliders.SilentAimPredictionAmount, 35, function(v)
+        State.Sliders.SilentAimPredictionAmount = v
+    end, 2)
 end
 
 
@@ -3882,10 +3984,12 @@ end)
 
 pcall(RefreshToolViewer)
 
-local SavedConfigs, ConfigStore = {}, {
+SavedConfigs, ConfigStore = {}, {
     Root = "BravoHack",
     Configs = "BravoHack/Configs",
-    Version = "v1.0.4",
+    Version = "v1.0.5",
+    KeyFile = "BravoHack/key.json",
+    MetaFile = "BravoHack/settings.json",
 }
 
 ConfigStore.SafeName = function(name)
@@ -3918,6 +4022,66 @@ ConfigStore.Ensure = function()
     end)
 
     return true
+end
+
+ConfigStore.SaveRememberedKey = function(key)
+    if not ConfigStore.Ensure() then return false end
+    if type(writefile) ~= "function" then return false end
+    local ok, encoded = pcall(function()
+        return game:GetService("HttpService"):JSONEncode({Key = tostring(key)})
+    end)
+    if not ok then return false end
+    return pcall(function() writefile(ConfigStore.KeyFile, encoded) end)
+end
+
+ConfigStore.ClearRememberedKey = function()
+    if type(delfile) == "function" then pcall(delfile, ConfigStore.KeyFile) end
+    if type(removefile) == "function" then pcall(removefile, ConfigStore.KeyFile) end
+end
+
+ConfigStore.SaveMeta = function()
+    if not ConfigStore.Ensure() or type(writefile) ~= "function" then return false end
+    local data = {
+        AutoRememberKey = State.Features.AutoRememberKey == true,
+        AutoLoadConfig = State.Features.AutoLoadConfig == true,
+        ConfigSelectedName = State.ConfigSelectedName or "Default",
+    }
+    local ok, encoded = pcall(function()
+        return game:GetService("HttpService"):JSONEncode(data)
+    end)
+    if not ok then return false end
+    return pcall(function() writefile(ConfigStore.MetaFile, encoded) end)
+end
+
+ConfigStore.List = function()
+    local names = {}
+    if type(listfiles) == "function" then
+        local ok, files = pcall(function()
+            return listfiles(ConfigStore.Configs)
+        end)
+        if ok and type(files) == "table" then
+            for _, path in ipairs(files) do
+                local name = tostring(path):match("([^/\\]+)%.json$")
+                if name and name ~= "" then
+                    table.insert(names, name)
+                end
+            end
+        end
+    end
+    table.sort(names, function(a, b) return a:lower() < b:lower() end)
+    if #names == 0 then names[1] = "Default" end
+    return names
+end
+
+ConfigStore.Delete = function(name)
+    local path = ConfigStore.Path(name)
+    local deleted = false
+    if type(delfile) == "function" then
+        deleted = pcall(delfile, path)
+    elseif type(removefile) == "function" then
+        deleted = pcall(removefile, path)
+    end
+    return deleted
 end
 
 ConfigStore.Prepare = function(cfg)
@@ -4063,7 +4227,11 @@ local function CaptureConfig()
     end
     for k, v in pairs(CONFIG.Keybinds) do cfg.Keybinds[k] = v end
     for k, v in pairs(State.Sliders) do cfg.Sliders[k] = v end
-    for k, v in pairs(State.Features) do cfg.Features[k] = v end
+    for k, v in pairs(State.Features) do
+        if k ~= "AutoRememberKey" and k ~= "AutoLoadConfig" then
+            cfg.Features[k] = v
+        end
+    end
     return cfg
 end
 
@@ -4115,9 +4283,23 @@ local function UnloadMenu()
     pcall(function() if UI.NotificationGui then UI.NotificationGui:Destroy() end end)
     pcall(function() if FreecamStatusLabel then FreecamStatusLabel:Destroy() end end)
     pcall(function() for plr in pairs(ToolViewerObjects) do RemoveToolViewerForPlayer(plr) end end)
+    pcall(function() RestoreSilentAimHook() end)
     pcall(function() State.StopSpectatingSelectedPlayer() end)
     pcall(function() DisableFreecam() end)
     pcall(function() DisableForceField() end)
+end
+
+RunAutoLoadConfig = function()
+    if not State.Features.AutoLoadConfig then return end
+    local name = State.ConfigSelectedName or "Default"
+    local cfg = ConfigStore and ConfigStore.Load and ConfigStore.Load(name)
+    if type(cfg) == "table" then
+        SavedConfigs[name] = cfg
+        pcall(function() ApplyConfig(cfg) end)
+        if Notify then
+            Notify("Configuration", "Auto-loaded \"" .. name .. "\".", true)
+        end
+    end
 end
 
 do
@@ -4146,30 +4328,154 @@ do
         if v then FreecamStatusLabel.Visible = false end
     end, "HideFreecamBar")
 
-    CreateSectionLabel(page, "Configuration", 9)
-    CreateActionButton(page, "Save config", 10, function()
-        local cfg = CaptureConfig()
-        SavedConfigs.Default = cfg
-        local ok, message = ConfigStore.Save("Default", cfg)
-        if Notify then
-            Notify("Configuration", ok and "Saved to BravoHack/Configs/Default.json." or message, true)
+    CreateSectionLabel(page, "Configuration Profiles", 9)
+
+    UI.ConfigNameInput = Instance.new("TextBox")
+    UI.ConfigNameInput.Size = UDim2.new(1, 0, 0, 34)
+    UI.ConfigNameInput.BackgroundColor3 = CONFIG.Colors.Panel
+    UI.ConfigNameInput.BorderSizePixel = 0
+    UI.ConfigNameInput.Font = Enum.Font.Gotham
+    UI.ConfigNameInput.TextSize = 12
+    UI.ConfigNameInput.TextColor3 = CONFIG.Colors.Text
+    UI.ConfigNameInput.PlaceholderColor3 = CONFIG.Colors.SubText
+    UI.ConfigNameInput.PlaceholderText = "Config name..."
+    UI.ConfigNameInput.ClearTextOnFocus = false
+    UI.ConfigNameInput.Text = State.ConfigSelectedName or "Default"
+    UI.ConfigNameInput.LayoutOrder = 10
+    UI.ConfigNameInput.Parent = page
+    NewCorner(5, UI.ConfigNameInput)
+    NewStroke(UI.ConfigNameInput, CONFIG.Colors.Stroke, 1, 0.45)
+
+    UI.ConfigSelectedLabel = Instance.new("TextLabel")
+    UI.ConfigSelectedLabel.Size = UDim2.new(1, 0, 0, 22)
+    UI.ConfigSelectedLabel.BackgroundTransparency = 1
+    UI.ConfigSelectedLabel.Font = Enum.Font.GothamMedium
+    UI.ConfigSelectedLabel.TextSize = 11
+    UI.ConfigSelectedLabel.TextColor3 = CONFIG.Colors.SubText
+    UI.ConfigSelectedLabel.TextXAlignment = Enum.TextXAlignment.Left
+    UI.ConfigSelectedLabel.Text = "Selected: " .. (State.ConfigSelectedName or "Default")
+    UI.ConfigSelectedLabel.LayoutOrder = 11
+    UI.ConfigSelectedLabel.Parent = page
+
+    UI.ConfigListFrame = Instance.new("ScrollingFrame")
+    UI.ConfigListFrame.Size = UDim2.new(1, 0, 0, 120)
+    UI.ConfigListFrame.BackgroundColor3 = CONFIG.Colors.Panel
+    UI.ConfigListFrame.BackgroundTransparency = 0.08
+    UI.ConfigListFrame.BorderSizePixel = 0
+    UI.ConfigListFrame.ScrollBarThickness = 4
+    UI.ConfigListFrame.ScrollBarImageColor3 = CONFIG.Colors.Accent
+    UI.ConfigListFrame.CanvasSize = UDim2.new()
+    UI.ConfigListFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    UI.ConfigListFrame.LayoutOrder = 12
+    UI.ConfigListFrame.Parent = page
+    NewCorner(5, UI.ConfigListFrame)
+    NewStroke(UI.ConfigListFrame, CONFIG.Colors.Stroke, 1, 0.45)
+
+    local configListLayout = Instance.new("UIListLayout")
+    configListLayout.Padding = UDim.new(0, 3)
+    configListLayout.Parent = UI.ConfigListFrame
+
+    local configListPadding = Instance.new("UIPadding")
+    configListPadding.PaddingTop = UDim.new(0, 4)
+    configListPadding.PaddingLeft = UDim.new(0, 4)
+    configListPadding.PaddingRight = UDim.new(0, 4)
+    configListPadding.PaddingBottom = UDim.new(0, 4)
+    configListPadding.Parent = UI.ConfigListFrame
+
+    local function RefreshConfigList()
+        if not UI.ConfigListFrame then return end
+        for _, child in ipairs(UI.ConfigListFrame:GetChildren()) do
+            if child:IsA("TextButton") then child:Destroy() end
         end
+        for _, name in ipairs(ConfigStore.List()) do
+            local b = Instance.new("TextButton")
+            b.Size = UDim2.new(1, -8, 0, 26)
+            b.BackgroundColor3 = name == State.ConfigSelectedName and Color3.fromRGB(32, 34, 40) or Color3.fromRGB(27, 27, 31)
+            b.BorderSizePixel = 0
+            b.Font = Enum.Font.GothamMedium
+            b.TextSize = 11
+            b.TextColor3 = CONFIG.Colors.Text
+            b.Text = name
+            b.AutoButtonColor = false
+            b.Parent = UI.ConfigListFrame
+            NewCorner(4, b)
+            b.MouseButton1Click:Connect(function()
+                State.ConfigSelectedName = name
+                if UI.ConfigNameInput then UI.ConfigNameInput.Text = name end
+                if UI.ConfigSelectedLabel then UI.ConfigSelectedLabel.Text = "Selected: " .. name end
+                ConfigStore.SaveMeta()
+                RefreshConfigList()
+            end)
+        end
+    end
+
+    CreateActionButton(page, "Save selected config", 13, function()
+        local name = UI.ConfigNameInput and UI.ConfigNameInput.Text or State.ConfigSelectedName or "Default"
+        name = tostring(name):gsub("^%s+", ""):gsub("%s+$", "")
+        if name == "" then name = "Default" end
+        State.ConfigSelectedName = name
+        local cfg = CaptureConfig()
+        SavedConfigs[name] = cfg
+        local ok, message = ConfigStore.Save(name, cfg)
+        ConfigStore.SaveMeta()
+        if UI.ConfigNameInput then UI.ConfigNameInput.Text = name end
+        if UI.ConfigSelectedLabel then UI.ConfigSelectedLabel.Text = "Selected: " .. name end
+        if Notify then Notify("Configuration", ok and ("Saved "" .. name .. "".") or message, true) end
+        RefreshConfigList()
     end, "SaveConfig")
-    CreateActionButton(page, "Load config", 11, function()
-        local cfg, message = ConfigStore.Load("Default")
+
+    CreateActionButton(page, "Load selected config", 14, function()
+        local name = State.ConfigSelectedName or "Default"
+        local cfg, message = ConfigStore.Load(name)
         if cfg then
-            SavedConfigs.Default = cfg
+            SavedConfigs[name] = cfg
             ApplyConfig(cfg)
-            if Notify then Notify("Configuration", "Loaded from BravoHack/Configs/Default.json.", true) end
-        elseif SavedConfigs.Default then
-            ApplyConfig(SavedConfigs.Default)
-            if Notify then Notify("Configuration", "Loaded the current session config.", true) end
+            if Notify then Notify("Configuration", "Loaded "" .. name .. "".", true) end
+        elseif SavedConfigs[name] then
+            ApplyConfig(SavedConfigs[name])
+            if Notify then Notify("Configuration", "Loaded the session config "" .. name .. "".", true) end
         elseif Notify then
-            Notify("Configuration", message or "No saved config found.", true)
+            Notify("Configuration", message or "No config found.", true)
         end
     end, "LoadConfig")
+
+    CreateActionButton(page, "Delete selected config", 15, function()
+        local name = State.ConfigSelectedName or "Default"
+        local ok = ConfigStore.Delete(name)
+        SavedConfigs[name] = nil
+        if name == "Default" then
+            State.ConfigSelectedName = "Default"
+        else
+            State.ConfigSelectedName = "Default"
+        end
+        ConfigStore.SaveMeta()
+        if UI.ConfigNameInput then UI.ConfigNameInput.Text = State.ConfigSelectedName end
+        if UI.ConfigSelectedLabel then UI.ConfigSelectedLabel.Text = "Selected: " .. State.ConfigSelectedName end
+        if Notify then Notify("Configuration", ok and ("Deleted "" .. name .. "".") or "Could not delete that config.", true) end
+        RefreshConfigList()
+    end)
+
+    CreateToggle(page, "Auto Load Selected Config", State.Features.AutoLoadConfig, 16, function(v)
+        State.Features.AutoLoadConfig = v
+        ConfigStore.SaveMeta()
+    end, "AutoLoadConfig")
+
+    CreateToggle(page, "Auto Remember Key", State.Features.AutoRememberKey, 17, function(v)
+        State.Features.AutoRememberKey = v
+        if not v then ConfigStore.ClearRememberedKey() end
+        ConfigStore.SaveMeta()
+    end, "AutoRememberKey")
+
+    CreateActionButton(page, "Reset remembered key", 18, function()
+        ConfigStore.ClearRememberedKey()
+        State.Features.AutoRememberKey = false
+        ConfigStore.SaveMeta()
+        if Notify then Notify("Key", "Remembered key cleared.", true) end
+    end)
+
+    task.defer(function() RefreshConfigList() end)
     CreateActionButton(page, "Uninject / Unload", 12, UnloadMenu, "UnloadMenu")
-    CreateActionButton(page, "Reset all settings", 14, function()
+    CreateActionButton(page, "Reset all settings", 20, function()
         for _, t in ipairs(ToggleRefs) do t.ref.SetState(t.default) end
         for _, sref in ipairs(SliderRefs) do sref.ref.Set(sref.default) end
         if Camera then Camera.FieldOfView = Originals.FieldOfView end
@@ -4179,6 +4485,9 @@ do
         Lighting.ClockTime = Originals.ClockTime
         Lighting.OutdoorAmbient = Originals.OutdoorAmbient
         Lighting.GlobalShadows = Originals.GlobalShadows
+        State.Features.AutoRememberKey = false
+        pcall(function() ConfigStore.ClearRememberedKey() end)
+        pcall(function() ConfigStore.SaveMeta() end)
     end, "ResetSettings")
 end
 
@@ -4397,7 +4706,7 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
         return
     end
 
-    local viewportCenter = Camera.ViewportSize / 2
+    local viewportCenter = UserInputService:GetMouseLocation()
     local nearestPart, nearestScreenDist = nil, math.huge
     local nearestCharacter
 
@@ -4473,6 +4782,118 @@ function PerformTriggerClick()
     return vuOk
 end
 
+
+local function GetSilentAimTarget()
+    Camera = Workspace.CurrentCamera or Camera
+    if not Camera then return nil end
+
+    local mousePos = UserInputService:GetMouseLocation()
+    local bestPart, bestDistance = nil, math.huge
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer then
+            local char = plr.Character
+            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+            local part = GetAimTargetPart(char)
+            local sameTeam = IsSameTeam(plr)
+            local protected = IsProtectedPlayer(plr)
+            if humanoid and humanoid.Health > 0 and part and not protected
+                and (not State.Features.SilentAimTeamCheck or not sameTeam)
+                and (not State.Features.SilentAimWallCheck or AimTargetVisible(part, true)) then
+
+                local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                if onScreen and screenPos.Z > 0 then
+                    local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                    if distance <= State.Sliders.SilentAimFOV and distance < bestDistance then
+                        bestPart = part
+                        bestDistance = distance
+                    end
+                end
+            end
+        end
+    end
+
+    return bestPart
+end
+
+State.SilentAimHook = State.SilentAimHook or {Installed = false, Old = nil}
+
+local function IsSilentAimRemote(remote)
+    if not remote or not remote:IsA("Instance") then return false end
+    if not (remote:IsA("RemoteEvent") or remote.ClassName == "UnreliableRemoteEvent") then return false end
+    local name = remote.Name:lower()
+    for _, token in ipairs({"shoot","fire","attack","hit","damage","bullet","weapon","gun","ray","projectile"}) do
+        if name:find(token, 1, true) then return true end
+    end
+    return false
+end
+
+local function InstallSilentAimHook()
+    if State.SilentAimHook.Installed then return end
+    if type(hookmetamethod) ~= "function" or type(newcclosure) ~= "function" or type(getnamecallmethod) ~= "function" then
+        return
+    end
+
+    local old
+    local wrapper = newcclosure(function(self, ...)
+        local method = getnamecallmethod()
+        local callerIsScript = false
+        if type(checkcaller) == "function" then
+            callerIsScript = checkcaller()
+        end
+
+        if State.Features.SilentAim and not callerIsScript and (method == "FireServer" or method == "InvokeServer") and IsSilentAimRemote(self) then
+            local target = GetSilentAimTarget()
+            if target and State.Sliders.SilentAimHitChance >= 100 or (target and math.random(1, 100) <= State.Sliders.SilentAimHitChance) then
+                local targetPosition = target.Position
+                if State.Features.SilentAimPrediction then
+                    targetPosition = targetPosition + target.AssemblyLinearVelocity * State.Sliders.SilentAimPredictionAmount
+                end
+
+                local args = {...}
+                local changed = false
+                for i, value in ipairs(args) do
+                    if typeof(value) == "Vector3" then
+                        args[i] = targetPosition
+                        changed = true
+                    elseif typeof(value) == "Ray" then
+                        args[i] = Ray.new(value.Origin, targetPosition - value.Origin)
+                        changed = true
+                    elseif typeof(value) == "CFrame" then
+                        args[i] = CFrame.new(value.Position, targetPosition)
+                        changed = true
+                    end
+                end
+
+                if changed then
+                    return old(self, table.unpack(args))
+                end
+            end
+        end
+
+        return old(self, ...)
+    end)
+
+    local ok, previous = pcall(function()
+        return hookmetamethod(game, "__namecall", wrapper)
+    end)
+    if ok and previous then
+        State.SilentAimHook.Old = previous
+        State.SilentAimHook.Installed = true
+    end
+end
+
+local function RestoreSilentAimHook()
+    if not State.SilentAimHook.Installed or type(hookmetamethod) ~= "function" or not State.SilentAimHook.Old then return end
+    pcall(function()
+        hookmetamethod(game, "__namecall", State.SilentAimHook.Old)
+    end)
+    State.SilentAimHook.Installed = false
+    State.SilentAimHook.Old = nil
+end
+
+InstallSilentAimHook()
+
 local triggerPending = false
 local triggerLastClick = 0
 local triggerTargetPlayer = nil
@@ -4489,9 +4910,7 @@ RunService:BindToRenderStep("BravoHackTriggerbot", Enum.RenderPriority.Camera.Va
 
     if os.clock() - triggerLastClick < State.Sliders.TriggerbotCooldown then return end
 
-    local mousePos = UserInputService:GetMouseLocation()
-    local guiInset = game:GetService("GuiService"):GetGuiInset()
-    local viewportMouse = mousePos - guiInset
+    local viewportMouse = UserInputService:GetMouseLocation()
     local bestPart, bestDistance, bestPlayer = nil, math.huge, nil
 
     for _, plr in ipairs(Players:GetPlayers()) do
