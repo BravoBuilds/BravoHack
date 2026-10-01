@@ -1,3 +1,5 @@
+-- BravoHack v1.0.2
+-- Based on v1.0.1 with startup syntax fixes.
 
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
@@ -903,7 +905,6 @@ UI.ColorPickerFrame = nil
 local ColorPickerOpen = false
 local FeatureColorRefs = {}
 local ApplyESPColors
-local UI.FOVStroke
 local Notify
 
 local function OpenColorPicker(colorName, titleText)
@@ -2512,7 +2513,6 @@ Notify = function(titleText, bodyText, force)
     end)
 end
 
-local UI.AimTargetDropdownRef
 
 local function CreateAimTargetDropdown(parent)
     local row = Instance.new("Frame")
@@ -3568,9 +3568,6 @@ LoadDex = function()
 end
 
 local SetMiscWindowVisible
-local UI.PlayerListGui, UI.PlayerListWindow, UI.PlayerListBody
-local UI.ChatLogGui, UI.ChatLogWindow, UI.ChatLogBody
-local UI.InventoryGui, UI.InventoryWindow, UI.InventoryBody
 do
     local page = Pages.Misc
     CreateSectionLabel(page, "Windows", 1)
