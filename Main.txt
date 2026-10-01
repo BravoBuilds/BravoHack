@@ -1,5 +1,5 @@
--- BravoHack v1.0.2
--- Based on v1.0.1 with startup syntax fixes.
+-- BravoHack v1.0.3
+-- Fixed toggle double-fire and Combat state synchronization.
 
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
@@ -103,7 +103,7 @@ local State = {
         TriggerbotAlwaysOn = true,
         TriggerbotOnlyWhileMouse1 = false,
         TriggerbotTeamCheck = true,
-        TriggerbotWallCheck = false,
+        TriggerbotWallCheck = true,
         ShowFOV = false,
         InfiniteJump = false,
         BunnyHop = false,
@@ -1228,7 +1228,6 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
     local function toggleFromInput()
         setState(not state)
     end
-    hitButton.Activated:Connect(toggleFromInput)
     hitButton.MouseButton1Click:Connect(toggleFromInput)
     row.MouseEnter:Connect(function() Tween(row, TI_FAST, { BackgroundTransparency = 0 }) end)
     row.MouseLeave:Connect(function() Tween(row, TI_FAST, { BackgroundTransparency = 0.2 }) end)
@@ -4272,7 +4271,16 @@ function PerformTriggerClick()
         vim:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, true, game, 0)
         vim:SendMouseButtonEvent(mousePos.X, mousePos.Y, 0, false, game, 0)
     end)
-    return ok
+    if ok then return true end
+
+    local vuOk = pcall(function()
+        local virtualUser = game:GetService("VirtualUser")
+        virtualUser:CaptureController()
+        virtualUser:Button1Down(Vector2.new(0, 0), Camera and Camera.CFrame or CFrame.new())
+        task.wait()
+        virtualUser:Button1Up(Vector2.new(0, 0), Camera and Camera.CFrame or CFrame.new())
+    end)
+    return vuOk
 end
 
 local triggerPending = false
