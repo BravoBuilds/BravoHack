@@ -1,5 +1,5 @@
--- BravoHack v1.0.3
--- Fixed toggle double-fire and Combat state synchronization.
+-- BravoHack v1.0.4
+-- Added executor-side persistent config storage.
 
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
@@ -3882,7 +3882,178 @@ end)
 
 pcall(RefreshToolViewer)
 
-local SavedConfigs = {}
+local SavedConfigs, ConfigStore = {}, {
+    Root = "BravoHack",
+    Configs = "BravoHack/Configs",
+    Version = "v1.0.4",
+}
+
+ConfigStore.SafeName = function(name)
+    return tostring(name or "Default"):gsub("[^%w%-%_ ]", "_")
+end
+
+ConfigStore.Path = function(name)
+    return ConfigStore.Configs .. "/" .. ConfigStore.SafeName(name) .. ".json"
+end
+
+ConfigStore.Ensure = function()
+    if type(makefolder) ~= "function" or type(writefile) ~= "function" or type(readfile) ~= "function" then
+        return false
+    end
+
+    pcall(function()
+        if type(isfolder) ~= "function" or not isfolder(ConfigStore.Root) then
+            makefolder(ConfigStore.Root)
+        end
+    end)
+
+    pcall(function()
+        if type(isfolder) ~= "function" or not isfolder(ConfigStore.Configs) then
+            makefolder(ConfigStore.Configs)
+        end
+    end)
+
+    pcall(function()
+        writefile(ConfigStore.Root .. "/version.txt", ConfigStore.Version)
+    end)
+
+    return true
+end
+
+ConfigStore.Prepare = function(cfg)
+    if type(cfg) ~= "table" then return nil end
+
+    local out = {
+        Keybinds = {},
+        Sliders = {},
+        Features = {},
+        AimTargetPart = cfg.AimTargetPart,
+        TriggerbotTargetPart = cfg.TriggerbotTargetPart,
+        ProtectedPlayers = {},
+    }
+
+    for k, v in pairs(cfg.Keybinds or {}) do
+        if typeof(v) == "EnumItem" then
+            out.Keybinds[k] = v.Name
+        elseif type(v) == "string" then
+            out.Keybinds[k] = v
+        end
+    end
+
+    for k, v in pairs(cfg.Sliders or {}) do
+        if type(v) == "number" then
+            out.Sliders[k] = v
+        end
+    end
+
+    for k, v in pairs(cfg.Features or {}) do
+        if type(v) == "boolean" then
+            out.Features[k] = v
+        end
+    end
+
+    for userId, enabled in pairs(cfg.ProtectedPlayers or {}) do
+        if enabled then
+            out.ProtectedPlayers[tostring(userId)] = true
+        end
+    end
+
+    return out
+end
+
+ConfigStore.Restore = function(data)
+    if type(data) ~= "table" then return nil end
+
+    local cfg = {
+        Keybinds = {},
+        Sliders = {},
+        Features = {},
+        AimTargetPart = data.AimTargetPart,
+        TriggerbotTargetPart = data.TriggerbotTargetPart,
+        ProtectedPlayers = {},
+    }
+
+    for k, v in pairs(data.Keybinds or {}) do
+        if type(v) == "string" and Enum.KeyCode[v] then
+            cfg.Keybinds[k] = Enum.KeyCode[v]
+        end
+    end
+
+    for k, v in pairs(data.Sliders or {}) do
+        if type(v) == "number" then
+            cfg.Sliders[k] = v
+        end
+    end
+
+    for k, v in pairs(data.Features or {}) do
+        if type(v) == "boolean" then
+            cfg.Features[k] = v
+        end
+    end
+
+    for userId, enabled in pairs(data.ProtectedPlayers or {}) do
+        if enabled then
+            cfg.ProtectedPlayers[tonumber(userId) or userId] = true
+        end
+    end
+
+    return cfg
+end
+
+ConfigStore.Save = function(name, cfg)
+    if not ConfigStore.Ensure() then
+        return false, "Executor file APIs are unavailable."
+    end
+
+    local payload = ConfigStore.Prepare(cfg)
+    if not payload then
+        return false, "Invalid config."
+    end
+
+    local ok, encoded = pcall(function()
+        return game:GetService("HttpService"):JSONEncode(payload)
+    end)
+    if not ok then
+        return false, "Config encoding failed."
+    end
+
+    local writeOk = pcall(function()
+        writefile(ConfigStore.Path(name), encoded)
+    end)
+    if not writeOk then
+        return false, "Could not write the config file."
+    end
+
+    return true, ConfigStore.Path(name)
+end
+
+ConfigStore.Load = function(name)
+    if not ConfigStore.Ensure() or type(isfile) ~= "function" then
+        return nil, "Executor file APIs are unavailable."
+    end
+
+    local path = ConfigStore.Path(name)
+    if not isfile(path) then
+        return nil, "Config file does not exist."
+    end
+
+    local readOk, raw = pcall(function()
+        return readfile(path)
+    end)
+    if not readOk or type(raw) ~= "string" or raw == "" then
+        return nil, "Could not read the config file."
+    end
+
+    local decodeOk, data = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(raw)
+    end)
+    if not decodeOk then
+        return nil, "Config file is invalid."
+    end
+
+    return ConfigStore.Restore(data), path
+end
+
 local Unloaded = false
 
 local function CaptureConfig()
@@ -3976,8 +4147,27 @@ do
     end, "HideFreecamBar")
 
     CreateSectionLabel(page, "Configuration", 9)
-    CreateActionButton(page, "Save config", 10, function() SavedConfigs.Default = CaptureConfig() end, "SaveConfig")
-    CreateActionButton(page, "Load config", 11, function() ApplyConfig(SavedConfigs.Default) end, "LoadConfig")
+    CreateActionButton(page, "Save config", 10, function()
+        local cfg = CaptureConfig()
+        SavedConfigs.Default = cfg
+        local ok, message = ConfigStore.Save("Default", cfg)
+        if Notify then
+            Notify("Configuration", ok and "Saved to BravoHack/Configs/Default.json." or message, true)
+        end
+    end, "SaveConfig")
+    CreateActionButton(page, "Load config", 11, function()
+        local cfg, message = ConfigStore.Load("Default")
+        if cfg then
+            SavedConfigs.Default = cfg
+            ApplyConfig(cfg)
+            if Notify then Notify("Configuration", "Loaded from BravoHack/Configs/Default.json.", true) end
+        elseif SavedConfigs.Default then
+            ApplyConfig(SavedConfigs.Default)
+            if Notify then Notify("Configuration", "Loaded the current session config.", true) end
+        elseif Notify then
+            Notify("Configuration", message or "No saved config found.", true)
+        end
+    end, "LoadConfig")
     CreateActionButton(page, "Uninject / Unload", 12, UnloadMenu, "UnloadMenu")
     CreateActionButton(page, "Reset all settings", 14, function()
         for _, t in ipairs(ToggleRefs) do t.ref.SetState(t.default) end
