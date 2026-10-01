@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="620" viewBox="0 0 1000 620">
+<rect width="1000" height="620" fill="#0b0d12"/>
+<rect x="270" y="95" width="460" height="430" rx="14" fill="#14161b" stroke="#34363e"/>
+<text x="295" y="135" fill="#f1f2f5" font-family="Arial" font-size="19" font-weight="700">Inventory View</text>
+<rect x="685" y="113" width="28" height="28" rx="6" fill="#22252c"/><text x="699" y="133" text-anchor="middle" fill="#f1f2f5" font-family="Arial" font-size="12">×</text>
+<text x="295" y="168" fill="#7e8490" font-family="Arial" font-size="13">Selected: @ExamplePlayer</text>
+<rect x="295" y="192" width="410" height="250" rx="8" fill="#101216"/>
+<g font-family="Arial" font-size="13" fill="#e6e7eb">
+<text x="315" y="225">Coins  x250</text><text x="315" y="258">Wood  x84</text><text x="315" y="291">Stone  x43</text><text x="315" y="324">Medkit  x3</text><text x="315" y="357">Key  x1</text></g>
+<rect x="295" y="458" width="410" height="36" rx="7" fill="#0069ff"/><text x="500" y="481" text-anchor="middle" fill="white" font-family="Arial" font-size="13" font-weight="700">Refresh</text>
+<text x="500" y="565" text-anchor="middle" fill="#7e8490" font-family="Arial" font-size="12">Documentation visual — not a captured runtime screenshot.</text>
+</svg>
