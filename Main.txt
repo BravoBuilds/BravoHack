@@ -1962,12 +1962,35 @@ function AddESPForPlayer(plr)
 
                     local boxFrame = Instance.new("Frame")
                     boxFrame.Name = "BravoHackBoxESP"
-                    boxFrame.BackgroundTransparency = 1
+                    boxFrame.BackgroundColor3 = CONFIG.Colors.BoxESP
+                    boxFrame.BackgroundTransparency = 0.94
                     boxFrame.BorderSizePixel = 0
                     boxFrame.Visible = false
                     boxFrame.ZIndex = 18
                     boxFrame.Parent = UI.Overlay
-                    local boxStroke = NewStroke(boxFrame, CONFIG.Colors.BoxESP, 1.5, 0)
+                    NewCorner(3, boxFrame)
+                    local boxStroke = NewStroke(boxFrame, CONFIG.Colors.BoxESP, 1, 0.7)
+                    local boxCorners = {}
+                    local function addBoxCorner(name, size, position)
+                        local part = Instance.new("Frame")
+                        part.Name = name
+                        part.Size = size
+                        part.Position = position
+                        part.BackgroundColor3 = CONFIG.Colors.BoxESP
+                        part.BorderSizePixel = 0
+                        part.ZIndex = 20
+                        part.Parent = boxFrame
+                        NewCorner(1, part)
+                        table.insert(boxCorners, part)
+                    end
+                    addBoxCorner("TopLeftH", UDim2.new(0, 12, 0, 2), UDim2.fromOffset(0, 0))
+                    addBoxCorner("TopLeftV", UDim2.new(0, 2, 0, 12), UDim2.fromOffset(0, 0))
+                    addBoxCorner("TopRightH", UDim2.new(0, 12, 0, 2), UDim2.new(1, -12, 0, 0))
+                    addBoxCorner("TopRightV", UDim2.new(0, 2, 0, 12), UDim2.new(1, -2, 0, 0))
+                    addBoxCorner("BottomLeftH", UDim2.new(0, 12, 0, 2), UDim2.new(0, 0, 1, -2))
+                    addBoxCorner("BottomLeftV", UDim2.new(0, 2, 0, 12), UDim2.new(0, 0, 1, -12))
+                    addBoxCorner("BottomRightH", UDim2.new(0, 12, 0, 2), UDim2.new(1, -12, 1, -2))
+                    addBoxCorner("BottomRightV", UDim2.new(0, 2, 0, 12), UDim2.new(1, -2, 1, -12))
 
                     local healthBar = Instance.new("Frame")
                     healthBar.Name = "BravoHackHealthBar"
@@ -2005,6 +2028,7 @@ function AddESPForPlayer(plr)
                         Tracer = tracer,
                         BoxFrame = boxFrame,
                         BoxStroke = boxStroke,
+                         BoxCorners = boxCorners,
                         HealthBar = healthBar,
                         HealthFill = healthFill,
                         SkeletonSegments = skeletonSegments,
@@ -2079,12 +2103,35 @@ function AddESPForPlayer(plr)
 
             local boxFrame = Instance.new("Frame")
             boxFrame.Name = "BravoHackBoxESP"
-            boxFrame.BackgroundTransparency = 1
+            boxFrame.BackgroundColor3 = CONFIG.Colors.BoxESP
+            boxFrame.BackgroundTransparency = 0.94
             boxFrame.BorderSizePixel = 0
             boxFrame.Visible = false
             boxFrame.ZIndex = 18
             boxFrame.Parent = UI.Overlay
-            local boxStroke = NewStroke(boxFrame, CONFIG.Colors.BoxESP, 1.5, 0)
+            NewCorner(3, boxFrame)
+            local boxStroke = NewStroke(boxFrame, CONFIG.Colors.BoxESP, 1, 0.7)
+            local boxCorners = {}
+            local function addBoxCorner(name, size, position)
+                local part = Instance.new("Frame")
+                part.Name = name
+                part.Size = size
+                part.Position = position
+                part.BackgroundColor3 = CONFIG.Colors.BoxESP
+                part.BorderSizePixel = 0
+                part.ZIndex = 20
+                part.Parent = boxFrame
+                NewCorner(1, part)
+                table.insert(boxCorners, part)
+            end
+            addBoxCorner("TopLeftH", UDim2.new(0, 12, 0, 2), UDim2.fromOffset(0, 0))
+            addBoxCorner("TopLeftV", UDim2.new(0, 2, 0, 12), UDim2.fromOffset(0, 0))
+            addBoxCorner("TopRightH", UDim2.new(0, 12, 0, 2), UDim2.new(1, -12, 0, 0))
+            addBoxCorner("TopRightV", UDim2.new(0, 2, 0, 12), UDim2.new(1, -2, 0, 0))
+            addBoxCorner("BottomLeftH", UDim2.new(0, 12, 0, 2), UDim2.new(0, 0, 1, -2))
+            addBoxCorner("BottomLeftV", UDim2.new(0, 2, 0, 12), UDim2.new(0, 0, 1, -12))
+            addBoxCorner("BottomRightH", UDim2.new(0, 12, 0, 2), UDim2.new(1, -12, 1, -2))
+            addBoxCorner("BottomRightV", UDim2.new(0, 2, 0, 12), UDim2.new(1, -2, 1, -12))
 
             local healthBar = Instance.new("Frame")
             healthBar.Name = "BravoHackHealthBar"
@@ -2117,6 +2164,7 @@ function AddESPForPlayer(plr)
                 Tracer = tracer,
                 BoxFrame = boxFrame,
                 BoxStroke = boxStroke,
+                         BoxCorners = boxCorners,
                 HealthBar = healthBar,
                 HealthFill = healthFill,
                 SkeletonSegments = skeletonSegments,
@@ -6770,12 +6818,35 @@ function AddESPForPlayer(plr)
 
                     local boxFrame = Instance.new("Frame")
                     boxFrame.Name = "BravoHackBoxESP"
-                    boxFrame.BackgroundTransparency = 1
+                    boxFrame.BackgroundColor3 = CONFIG.Colors.BoxESP
+                    boxFrame.BackgroundTransparency = 0.94
                     boxFrame.BorderSizePixel = 0
                     boxFrame.Visible = false
                     boxFrame.ZIndex = 18
                     boxFrame.Parent = UI.Overlay
-                    local boxStroke = NewStroke(boxFrame, CONFIG.Colors.BoxESP, 1.5, 0)
+                    NewCorner(3, boxFrame)
+                    local boxStroke = NewStroke(boxFrame, CONFIG.Colors.BoxESP, 1, 0.7)
+                    local boxCorners = {}
+                    local function addBoxCorner(name, size, position)
+                        local part = Instance.new("Frame")
+                        part.Name = name
+                        part.Size = size
+                        part.Position = position
+                        part.BackgroundColor3 = CONFIG.Colors.BoxESP
+                        part.BorderSizePixel = 0
+                        part.ZIndex = 20
+                        part.Parent = boxFrame
+                        NewCorner(1, part)
+                        table.insert(boxCorners, part)
+                    end
+                    addBoxCorner("TopLeftH", UDim2.new(0, 12, 0, 2), UDim2.fromOffset(0, 0))
+                    addBoxCorner("TopLeftV", UDim2.new(0, 2, 0, 12), UDim2.fromOffset(0, 0))
+                    addBoxCorner("TopRightH", UDim2.new(0, 12, 0, 2), UDim2.new(1, -12, 0, 0))
+                    addBoxCorner("TopRightV", UDim2.new(0, 2, 0, 12), UDim2.new(1, -2, 0, 0))
+                    addBoxCorner("BottomLeftH", UDim2.new(0, 12, 0, 2), UDim2.new(0, 0, 1, -2))
+                    addBoxCorner("BottomLeftV", UDim2.new(0, 2, 0, 12), UDim2.new(0, 0, 1, -12))
+                    addBoxCorner("BottomRightH", UDim2.new(0, 12, 0, 2), UDim2.new(1, -12, 1, -2))
+                    addBoxCorner("BottomRightV", UDim2.new(0, 2, 0, 12), UDim2.new(1, -2, 1, -12))
 
                     local healthBar = Instance.new("Frame")
                     healthBar.Name = "BravoHackHealthBar"
@@ -6813,6 +6884,7 @@ function AddESPForPlayer(plr)
                         Tracer = tracer,
                         BoxFrame = boxFrame,
                         BoxStroke = boxStroke,
+                         BoxCorners = boxCorners,
                         HealthBar = healthBar,
                         HealthFill = healthFill,
                         SkeletonSegments = skeletonSegments,
@@ -6887,12 +6959,35 @@ function AddESPForPlayer(plr)
 
             local boxFrame = Instance.new("Frame")
             boxFrame.Name = "BravoHackBoxESP"
-            boxFrame.BackgroundTransparency = 1
+            boxFrame.BackgroundColor3 = CONFIG.Colors.BoxESP
+            boxFrame.BackgroundTransparency = 0.94
             boxFrame.BorderSizePixel = 0
             boxFrame.Visible = false
             boxFrame.ZIndex = 18
             boxFrame.Parent = UI.Overlay
-            local boxStroke = NewStroke(boxFrame, CONFIG.Colors.BoxESP, 1.5, 0)
+            NewCorner(3, boxFrame)
+            local boxStroke = NewStroke(boxFrame, CONFIG.Colors.BoxESP, 1, 0.7)
+            local boxCorners = {}
+            local function addBoxCorner(name, size, position)
+                local part = Instance.new("Frame")
+                part.Name = name
+                part.Size = size
+                part.Position = position
+                part.BackgroundColor3 = CONFIG.Colors.BoxESP
+                part.BorderSizePixel = 0
+                part.ZIndex = 20
+                part.Parent = boxFrame
+                NewCorner(1, part)
+                table.insert(boxCorners, part)
+            end
+            addBoxCorner("TopLeftH", UDim2.new(0, 12, 0, 2), UDim2.fromOffset(0, 0))
+            addBoxCorner("TopLeftV", UDim2.new(0, 2, 0, 12), UDim2.fromOffset(0, 0))
+            addBoxCorner("TopRightH", UDim2.new(0, 12, 0, 2), UDim2.new(1, -12, 0, 0))
+            addBoxCorner("TopRightV", UDim2.new(0, 2, 0, 12), UDim2.new(1, -2, 0, 0))
+            addBoxCorner("BottomLeftH", UDim2.new(0, 12, 0, 2), UDim2.new(0, 0, 1, -2))
+            addBoxCorner("BottomLeftV", UDim2.new(0, 2, 0, 12), UDim2.new(0, 0, 1, -12))
+            addBoxCorner("BottomRightH", UDim2.new(0, 12, 0, 2), UDim2.new(1, -12, 1, -2))
+            addBoxCorner("BottomRightV", UDim2.new(0, 2, 0, 12), UDim2.new(1, -2, 1, -12))
 
             local healthBar = Instance.new("Frame")
             healthBar.Name = "BravoHackHealthBar"
@@ -6925,6 +7020,7 @@ function AddESPForPlayer(plr)
                 Tracer = tracer,
                 BoxFrame = boxFrame,
                 BoxStroke = boxStroke,
+                         BoxCorners = boxCorners,
                 HealthBar = healthBar,
                 HealthFill = healthFill,
                 SkeletonSegments = skeletonSegments,
@@ -10349,8 +10445,14 @@ RunService.Heartbeat:Connect(function(dt)
                     objs.BoxFrame.Visible = State.Features.BoxESP and boundsVisible
                     if boundsVisible and State.Features.BoxESP then
                         objs.BoxFrame.Position = UDim2.fromOffset(minX, minY)
-                        objs.BoxFrame.Size = UDim2.fromOffset(math.max(1, maxX - minX), math.max(1, maxY - minY))
-                        objs.BoxStroke.Color = protected and CONFIG.Colors.ProtectedESP or CONFIG.Colors.BoxESP
+                        local boxWidth = math.max(16, maxX - minX)
+                        local boxHeight = math.max(20, maxY - minY)
+                        objs.BoxFrame.Size = UDim2.fromOffset(boxWidth, boxHeight)
+                        local boxColor = protected and CONFIG.Colors.ProtectedESP or CONFIG.Colors.BoxESP
+                        objs.BoxStroke.Color = boxColor
+                        for _, corner in ipairs(objs.BoxCorners or {}) do
+                            corner.BackgroundColor3 = boxColor
+                        end
                     end
                 end
                 if objs.HealthBar then
