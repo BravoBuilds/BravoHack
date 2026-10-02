@@ -17,8 +17,8 @@ async function isValidKey(key) {
   const response = await fetch(KEYS_URL, { headers: { "User-Agent": "BravoHack-KeyAPI/1.0" } });
   if (!response.ok) return null;
   const text = await response.text();
-  const valid = new Set(text.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => line.split("|")[0].trim()));
-  return valid.has(key);
+  const valid = new Set(text.split(/\r?\n/).map(line => line.trim()).filter(Boolean).map(line => line.split("|")[0].trim().toLowerCase()));
+  return valid.has(key.toLowerCase());
 }
 
 async function handlePost(request, env) {
