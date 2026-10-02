@@ -1,5 +1,5 @@
--- BravoHack v1.0.6
--- Expanded Aimbot FOV, improved Triggerbot targeting, and added GitHub Lua modules.
+-- BravoHack v1.0.7
+-- UI refresh to match the reference layout while keeping the existing feature and module systems.
 
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
@@ -74,10 +74,10 @@ local CONFIG = {
         ProtectedOutline = Color3.fromRGB(255, 235, 160),
     },
     Sizes = {
-        Window  = UDim2.fromOffset(640, 470),
+        Window  = UDim2.fromOffset(960, 580),
         Sidebar = 0,
-        TopBar  = 40,
-        StatusBar = 26,
+        TopBar  = 58,
+        StatusBar = 30,
     },
 }
 
@@ -277,7 +277,7 @@ KeyGate.Subtitle.BackgroundTransparency = 1
 KeyGate.Subtitle.Position = UDim2.fromOffset(20, 52)
 KeyGate.Subtitle.Size = UDim2.new(1, -40, 0, 42)
 KeyGate.Subtitle.Font = Enum.Font.Gotham
-KeyGate.Subtitle.TextSize = 12
+KeyGate.Subtitle.TextSize = 14
 KeyGate.Subtitle.TextColor3 = CONFIG.Colors.SubText
 KeyGate.Subtitle.TextWrapped = true
 KeyGate.Subtitle.Text = "Enter your access key to unlock the menu. Access is remembered for this session."
@@ -375,7 +375,7 @@ UI.MainFrame.Name = "MainFrame"
 UI.MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 UI.MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 UI.MainFrame.Size = CONFIG.Sizes.Window
-UI.MainFrame.BackgroundColor3 = CONFIG.Colors.Background
+UI.MainFrame.BackgroundColor3 = Color3.fromRGB(16, 18, 23)
 UI.MainFrame.BackgroundTransparency = 0.05
 UI.MainFrame.BorderSizePixel = 0
 UI.MainFrame.ClipsDescendants = true
@@ -392,7 +392,7 @@ UI.UIScaleInst.Parent = UI.MainFrame
 UI.TopBar = Instance.new("Frame")
 UI.TopBar.Name = "TopBar"
 UI.TopBar.Size = UDim2.new(1, 0, 0, CONFIG.Sizes.TopBar)
-UI.TopBar.BackgroundColor3 = CONFIG.Colors.Sidebar
+UI.TopBar.BackgroundColor3 = Color3.fromRGB(17, 18, 22)
 UI.TopBar.BorderSizePixel = 0
 UI.TopBar.Parent = UI.MainFrame
 NewCorner(5, UI.TopBar)
@@ -406,14 +406,28 @@ UI.TopBarMask.Parent = UI.TopBar
 
 UI.Title = Instance.new("TextLabel")
 UI.Title.BackgroundTransparency = 1
-UI.Title.Position = UDim2.new(0, 14, 0, 0)
-UI.Title.Size = UDim2.new(1, -60, 1, 0)
+UI.Title.Position = UDim2.new(0, 30, 0, 0)
+UI.Title.Size = UDim2.new(1, -170, 1, 0)
 UI.Title.Font = Enum.Font.GothamBold
-UI.Title.TextSize = 15
+UI.Title.TextSize = 18
 UI.Title.TextColor3 = CONFIG.Colors.Text
 UI.Title.TextXAlignment = Enum.TextXAlignment.Left
 UI.Title.Text = "BravoHack"
 UI.Title.Parent = UI.TopBar
+
+UI.VersionLabel = Instance.new("TextLabel")
+UI.VersionLabel.Name = "VersionLabel"
+UI.VersionLabel.BackgroundTransparency = 1
+UI.VersionLabel.AnchorPoint = Vector2.new(1, 0.5)
+UI.VersionLabel.Position = UDim2.new(1, -76, 0.5, 0)
+UI.VersionLabel.Size = UDim2.fromOffset(70, 24)
+UI.VersionLabel.Font = Enum.Font.Gotham
+UI.VersionLabel.TextSize = 12
+UI.VersionLabel.TextColor3 = CONFIG.Colors.SubText
+UI.VersionLabel.TextXAlignment = Enum.TextXAlignment.Right
+UI.VersionLabel.Text = "v1.0.7"
+UI.VersionLabel.Parent = UI.TopBar
+
 
 UI.CloseButton = Instance.new("TextButton")
 UI.CloseButton.Size = UDim2.fromOffset(28, 28)
@@ -430,29 +444,29 @@ NewCorner(3, UI.CloseButton)
 
 UI.TopTabBar = Instance.new("Frame")
 UI.TopTabBar.Name = "TopTabBar"
-UI.TopTabBar.Size = UDim2.new(1, -16, 0, 34)
-UI.TopTabBar.Position = UDim2.fromOffset(8, CONFIG.Sizes.TopBar)
-UI.TopTabBar.BackgroundColor3 = Color3.fromRGB(17, 17, 19)
+UI.TopTabBar.Size = UDim2.new(1, -60, 0, 40)
+UI.TopTabBar.Position = UDim2.fromOffset(30, CONFIG.Sizes.TopBar)
+UI.TopTabBar.BackgroundColor3 = Color3.fromRGB(17, 18, 22)
 UI.TopTabBar.BorderSizePixel = 0
+UI.TopTabBar.BackgroundTransparency = 1
 UI.TopTabBar.Parent = UI.MainFrame
-NewStroke(UI.TopTabBar, CONFIG.Colors.Stroke, 1, 0.15)
 
 UI.TopTabLayout = Instance.new("UIListLayout")
 UI.TopTabLayout.FillDirection = Enum.FillDirection.Horizontal
 UI.TopTabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UI.TopTabLayout.Padding = UDim.new(0, 2)
+UI.TopTabLayout.Padding = UDim.new(0, 10)
 UI.TopTabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 UI.TopTabLayout.Parent = UI.TopTabBar
 
 UI.TopTabPadding = Instance.new("UIPadding")
-UI.TopTabPadding.PaddingLeft = UDim.new(0, 3)
-UI.TopTabPadding.PaddingRight = UDim.new(0, 3)
-UI.TopTabPadding.PaddingTop = UDim.new(0, 3)
-UI.TopTabPadding.PaddingBottom = UDim.new(0, 3)
+UI.TopTabPadding.PaddingLeft = UDim.new(0, 0)
+UI.TopTabPadding.PaddingRight = UDim.new(0, 0)
+UI.TopTabPadding.PaddingTop = UDim.new(0, 4)
+UI.TopTabPadding.PaddingBottom = UDim.new(0, 4)
 UI.TopTabPadding.Parent = UI.TopTabBar
 
 UI.Indicator = Instance.new("Frame")
-UI.Indicator.Size = UDim2.fromOffset(62, 2)
+UI.Indicator.Size = UDim2.fromOffset(70, 2)
 UI.Indicator.BackgroundColor3 = CONFIG.Colors.Accent
 UI.Indicator.BorderSizePixel = 0
 UI.Indicator.ZIndex = 20
@@ -461,15 +475,15 @@ NewCorner(0, UI.Indicator)
 
 UI.ContentArea = Instance.new("Frame")
 UI.ContentArea.Name = "ContentArea"
-UI.ContentArea.Size = UDim2.new(1, 0, 1, -CONFIG.Sizes.TopBar - 34 - CONFIG.Sizes.StatusBar)
-UI.ContentArea.Position = UDim2.new(0, 0, 0, CONFIG.Sizes.TopBar + 34)
+UI.ContentArea.Size = UDim2.new(1, 0, 1, -CONFIG.Sizes.TopBar - 40 - CONFIG.Sizes.StatusBar)
+UI.ContentArea.Position = UDim2.new(0, 0, 0, CONFIG.Sizes.TopBar + 40)
 UI.ContentArea.BackgroundTransparency = 1
 UI.ContentArea.Parent = UI.MainFrame
 
 UI.TabHeader = Instance.new("Frame")
 UI.TabHeader.Name = "TabHeader"
-UI.TabHeader.Size = UDim2.new(1, -20, 0, 34)
-UI.TabHeader.Position = UDim2.fromOffset(10, 4)
+UI.TabHeader.Size = UDim2.new(1, -60, 0, 42)
+UI.TabHeader.Position = UDim2.fromOffset(30, 10)
 UI.TabHeader.BackgroundTransparency = 1
 UI.TabHeader.Parent = UI.ContentArea
 
@@ -477,9 +491,9 @@ UI.TabTitle = Instance.new("TextLabel")
 UI.TabTitle.Name = "TabTitle"
 UI.TabTitle.BackgroundTransparency = 1
 UI.TabTitle.Position = UDim2.fromOffset(0, 0)
-UI.TabTitle.Size = UDim2.new(1, 0, 0, 25)
+UI.TabTitle.Size = UDim2.new(1, 0, 0, 28)
 UI.TabTitle.Font = Enum.Font.GothamBold
-UI.TabTitle.TextSize = 15
+UI.TabTitle.TextSize = 17
 UI.TabTitle.TextColor3 = CONFIG.Colors.Text
 UI.TabTitle.TextXAlignment = Enum.TextXAlignment.Left
 UI.TabTitle.Text = "Visuals"
@@ -487,7 +501,7 @@ UI.TabTitle.Parent = UI.TabHeader
 
 UI.TabAccent = Instance.new("Frame")
 UI.TabAccent.Name = "TabAccent"
-UI.TabAccent.Position = UDim2.fromOffset(0, 27)
+UI.TabAccent.Position = UDim2.fromOffset(0, 31)
 UI.TabAccent.Size = UDim2.fromOffset(26, 2)
 UI.TabAccent.BackgroundColor3 = CONFIG.Colors.Accent
 UI.TabAccent.BorderSizePixel = 0
@@ -847,7 +861,7 @@ end)
 UI.FPSLabel = Instance.new("TextLabel")
 UI.FPSLabel.BackgroundTransparency = 1
 UI.FPSLabel.AnchorPoint = Vector2.new(1, 0)
-UI.FPSLabel.Position = UDim2.new(1, -12, 0, 0)
+UI.FPSLabel.Position = UDim2.new(1, -18, 0, 0)
 UI.FPSLabel.Size = UDim2.fromOffset(80, CONFIG.Sizes.StatusBar)
 UI.FPSLabel.Font = Enum.Font.GothamMedium
 UI.FPSLabel.TextSize = 12
@@ -874,8 +888,8 @@ local PageBasePositions = {}
 for i, name in ipairs(categories) do
     local page = Instance.new("ScrollingFrame")
     page.Name = name
-    page.Size = UDim2.new(1, -20, 1, -52)
-    page.Position = UDim2.new(0, 10, 0, 46)
+    page.Size = UDim2.new(1, -60, 1, -60)
+    page.Position = UDim2.new(0, 30, 0, 58)
     page.BackgroundTransparency = 1
     page.BorderSizePixel = 0
     page.ScrollBarThickness = 4
@@ -885,8 +899,13 @@ for i, name in ipairs(categories) do
     page.Visible = (name == State.CurrentTab)
     page.Parent = UI.ContentArea
 
+    local pagePadding = Instance.new("UIPadding")
+    pagePadding.PaddingTop = UDim.new(0, 2)
+    pagePadding.PaddingBottom = UDim.new(0, 10)
+    pagePadding.Parent = page
+
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 8)
+    layout.Padding = UDim.new(0, 10)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = page
 
@@ -895,12 +914,12 @@ for i, name in ipairs(categories) do
 
     local btn = Instance.new("TextButton")
     btn.Name = name
-    btn.Size = UDim2.fromOffset(74, 28)
-    btn.BackgroundColor3 = name == State.CurrentTab and Color3.fromRGB(32, 34, 40) or Color3.fromRGB(17, 17, 19)
-    btn.BackgroundTransparency = name == State.CurrentTab and 0 or 0.2
+    btn.Size = UDim2.fromOffset(78, 32)
+    btn.BackgroundColor3 = Color3.fromRGB(17, 18, 22)
+    btn.BackgroundTransparency = 1
     btn.Text = name
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 11
+    btn.TextSize = 12
     btn.TextColor3 = (name == State.CurrentTab) and CONFIG.Colors.Text or CONFIG.Colors.SubText
     btn.TextXAlignment = Enum.TextXAlignment.Center
     btn.TextYAlignment = Enum.TextYAlignment.Center
@@ -910,7 +929,7 @@ for i, name in ipairs(categories) do
     btn.LayoutOrder = i
     btn.Selectable = true
     btn.Parent = UI.TopTabBar
-    NewCorner(4, btn)
+    NewCorner(6, btn)
     SidebarButtons[name] = btn
 end
 
@@ -919,8 +938,8 @@ local function RefreshTabVisuals()
         local selected = (tabName == State.CurrentTab)
         Tween(tabButton, TI_FAST, {
             TextColor3 = selected and CONFIG.Colors.Text or CONFIG.Colors.SubText,
-            BackgroundColor3 = selected and Color3.fromRGB(32, 34, 40) or Color3.fromRGB(17, 17, 19),
-            BackgroundTransparency = selected and 0 or 0.2,
+            BackgroundColor3 = Color3.fromRGB(17, 18, 22),
+            BackgroundTransparency = 1,
         })
     end
     local currentButton = SidebarButtons[State.CurrentTab]
@@ -948,7 +967,7 @@ local function SwitchTab(name)
     previousPage.Visible = false
     State.CurrentTab = name
     UI.TabTitle.Text = name
-    local basePos = PageBasePositions[name] or UDim2.new(0, 10, 0, 54)
+    local basePos = PageBasePositions[name] or UDim2.new(0, 30, 0, 58)
     nextPage.Position = UDim2.new(basePos.X.Scale, basePos.X.Offset + 14, basePos.Y.Scale, basePos.Y.Offset)
     nextPage.Visible = true
     Tween(nextPage, TI_MED, { Position = basePos })
@@ -957,13 +976,13 @@ end
 
 for name, btn in pairs(SidebarButtons) do
     btn.MouseEnter:Connect(function()
-        Tween(btn, TI_FAST, { TextColor3 = CONFIG.Colors.Text, BackgroundTransparency = 0.88 })
+        Tween(btn, TI_FAST, { TextColor3 = CONFIG.Colors.Text, BackgroundTransparency = 0.92 })
     end)
     btn.MouseLeave:Connect(function()
         local selected = (State.CurrentTab == name)
         Tween(btn, TI_FAST, {
             TextColor3 = selected and CONFIG.Colors.Text or CONFIG.Colors.SubText,
-            BackgroundTransparency = selected and 0.82 or 1,
+            BackgroundTransparency = 1,
         })
     end)
     btn.MouseButton1Click:Connect(function()
@@ -1151,7 +1170,7 @@ end
 
 local function CreateSectionLabel(parent, text, order)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 28)
+    row.Size = UDim2.new(1, 0, 0, 36)
     row.BackgroundTransparency = 1
     row.BorderSizePixel = 0
     row.LayoutOrder = order or 1
@@ -1159,18 +1178,18 @@ local function CreateSectionLabel(parent, text, order)
 
     local title = Instance.new("TextLabel")
     title.BackgroundTransparency = 1
-    title.Position = UDim2.fromOffset(2, 2)
-    title.Size = UDim2.new(1, -4, 0, 18)
+    title.Position = UDim2.fromOffset(0, 0)
+    title.Size = UDim2.new(1, -4, 0, 24)
     title.Font = Enum.Font.GothamBold
     title.TextSize = 12
     title.TextColor3 = CONFIG.Colors.SubText
     title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Text = string.upper(tostring(text))
+    title.Text = tostring(text)
     title.Parent = row
 
     local accent = Instance.new("Frame")
-    accent.Size = UDim2.fromOffset(28, 2)
-    accent.Position = UDim2.fromOffset(2, 22)
+    accent.Size = UDim2.fromOffset(24, 2)
+    accent.Position = UDim2.fromOffset(0, 30)
     accent.BackgroundColor3 = CONFIG.Colors.Accent
     accent.BorderSizePixel = 0
     accent.Parent = row
@@ -1184,20 +1203,20 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
     local hasColor = colorName ~= nil
     local reserved = 60 + (hasKey and 68 or 0) + (hasColor and 30 or 0)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, (hasKey or hasColor) and 42 or 34)
+    row.Size = UDim2.new(1, 0, 0, (hasKey or hasColor) and 46 or 40)
     row.BackgroundColor3 = CONFIG.Colors.Panel
     row.BackgroundTransparency = 0.08
     row.BorderSizePixel = 0
     row.LayoutOrder = order
     row.Parent = parent
-    NewCorner(4, row)
-    NewStroke(row, CONFIG.Colors.Stroke, 1, 0.55)
+    NewCorner(10, row)
+    NewStroke(row, CONFIG.Colors.Stroke, 1, 0.48)
 
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -reserved, 1, 0)
     label.Position = UDim2.new(0, 12, 0, 0)
     label.BackgroundTransparency = 1
-    label.Font = Enum.Font.Gotham
+    label.Font = Enum.Font.GothamMedium
     label.TextSize = 13
     label.TextColor3 = CONFIG.Colors.Text
     label.TextXAlignment = Enum.TextXAlignment.Left
@@ -1205,12 +1224,12 @@ local function CreateToggle(parent, text, default, order, callback, keyName, col
     label.Parent = row
 
     local switchBG = Instance.new("Frame")
-    switchBG.Size = UDim2.fromOffset(14, 14)
-    switchBG.Position = UDim2.new(1, -26, 0.5, -7)
+    switchBG.Size = UDim2.fromOffset(16, 16)
+    switchBG.Position = UDim2.new(1, -30, 0.5, -8)
     switchBG.BackgroundColor3 = default and CONFIG.Colors.Accent or Color3.fromRGB(16, 16, 18)
     switchBG.BorderSizePixel = 0
     switchBG.Parent = row
-    NewCorner(2, switchBG)
+    NewCorner(5, switchBG)
     NewStroke(switchBG, default and CONFIG.Colors.Accent or CONFIG.Colors.Stroke, 1, 0)
 
     local knob = Instance.new("Frame")
@@ -1323,13 +1342,13 @@ end
 local function CreateSlider(parent, text, min, max, default, order, callback, decimals)
     decimals = decimals or 0
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 46)
+    row.Size = UDim2.new(1, 0, 0, 54)
     row.BackgroundColor3 = CONFIG.Colors.Panel
     row.BackgroundTransparency = 0.08
     row.BorderSizePixel = 0
     row.LayoutOrder = order
     row.Parent = parent
-    NewCorner(8, row)
+    NewCorner(10, row)
 
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -70, 0, 20)
@@ -1356,8 +1375,8 @@ local function CreateSlider(parent, text, min, max, default, order, callback, de
 
     local track = Instance.new("Frame")
     track.Active = true
-    track.Size = UDim2.new(1, -24, 0, 6)
-    track.Position = UDim2.new(0, 12, 1, -16)
+    track.Size = UDim2.new(1, -28, 0, 6)
+    track.Position = UDim2.new(0, 14, 1, -18)
     track.BackgroundColor3 = Color3.fromRGB(55, 55, 63)
     track.BorderSizePixel = 0
     track.Parent = row
@@ -1434,7 +1453,7 @@ end
 
 local function CreateKeybind(parent, text, defaultKey, order, callback)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, 34)
+    row.Size = UDim2.new(1, 0, 0, 40)
     row.BackgroundColor3 = CONFIG.Colors.Panel
     row.BackgroundTransparency = 0.08
     row.BorderSizePixel = 0
@@ -1488,14 +1507,14 @@ end
 
 local function CreateActionButton(parent, text, order, callback, keyName)
     local row = Instance.new("Frame")
-    row.Size = UDim2.new(1, 0, 0, keyName and 42 or 34)
+    row.Size = UDim2.new(1, 0, 0, keyName and 46 or 40)
     row.BackgroundColor3 = Color3.fromRGB(28, 28, 32)
     row.BackgroundTransparency = 0
     row.BorderSizePixel = 0
     row.LayoutOrder = order
     row.Parent = parent
-    NewCorner(4, row)
-    NewStroke(row, CONFIG.Colors.Stroke, 1, 0.45)
+    NewCorner(10, row)
+    NewStroke(row, CONFIG.Colors.Stroke, 1, 0.42)
 
     local btn = Instance.new("TextButton")
     btn.BackgroundTransparency = 1
