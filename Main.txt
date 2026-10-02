@@ -1,6 +1,3 @@
--- BravoHack v1.2.0
--- External API key binding by immutable Roblox UserId with one-time key claiming.
-
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
 local UserInputService   = game:GetService("UserInputService")
