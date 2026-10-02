@@ -1,5 +1,5 @@
--- BravoHack v1.0.8
--- Reference-style UI polish, skeleton visibility checks, head target highlighting, radar, and simplified combat presets.
+-- BravoHack v1.0.7
+-- UI refresh to match the reference layout while keeping the existing feature and module systems.
 
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
@@ -63,9 +63,6 @@ local CONFIG = {
         Stroke      = Color3.fromRGB(52, 52, 58),
         SwitchOff   = Color3.fromRGB(34, 34, 38),
         Skeleton    = Color3.fromRGB(80, 190, 255),
-        SkeletonVisible = Color3.fromRGB(80, 230, 125),
-        SkeletonHidden = Color3.fromRGB(235, 85, 95),
-        HeadTarget = Color3.fromRGB(255, 175, 65),
         ESPFill     = Color3.fromRGB(90, 110, 255),
         ESPOutline  = Color3.fromRGB(255, 255, 255),
         Tracer      = Color3.fromRGB(90, 110, 255),
@@ -75,7 +72,6 @@ local CONFIG = {
         AimTarget   = Color3.fromRGB(255, 80, 95),
         ProtectedESP = Color3.fromRGB(255, 190, 70),
         ProtectedOutline = Color3.fromRGB(255, 235, 160),
-        RadarBackground = Color3.fromRGB(13, 15, 19),
     },
     Sizes = {
         Window  = UDim2.fromOffset(960, 580),
@@ -134,9 +130,6 @@ local State = {
         HideFreecamBar = false,
         TeamCheck = false,
         WallCheck = false,
-        SkeletonVisibilityCheck = true,
-        HeadTargetIndicator = true,
-        Radar = false,
     },
     Sliders = {
         ESPDistance = 300,
@@ -158,7 +151,6 @@ local State = {
         TimeOfDay = 14,
         Gravity = 196.2,
         UIScale = 1,
-        RadarRange = 300,
     },
     Connections = {},
     ESPObjects = {},
@@ -2130,177 +2122,6 @@ FOVCircle.Parent = UI.Overlay
 NewCorner(9999, FOVCircle)
 UI.FOVStroke = NewStroke(FOVCircle, CONFIG.Colors.Accent, 2, 0.25)
 
-do
-    local radarFrame = Instance.new("Frame")
-    radarFrame.Name = "BravoHackRadar"
-    radarFrame.AnchorPoint = Vector2.new(1, 1)
-    radarFrame.Position = UDim2.new(1, -18, 1, -42)
-    radarFrame.Size = UDim2.fromOffset(190, 190)
-    radarFrame.BackgroundColor3 = CONFIG.Colors.RadarBackground
-    radarFrame.BackgroundTransparency = 0.08
-    radarFrame.BorderSizePixel = 0
-    radarFrame.Visible = State.Features.Radar
-    radarFrame.ZIndex = 40
-    radarFrame.Parent = UI.Overlay
-    NewCorner(18, radarFrame)
-    NewStroke(radarFrame, CONFIG.Colors.Stroke, 1, 0.15)
-
-    local title = Instance.new("TextLabel")
-    title.BackgroundTransparency = 1
-    title.Position = UDim2.fromOffset(14, 8)
-    title.Size = UDim2.new(1, -28, 0, 18)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 11
-    title.TextColor3 = CONFIG.Colors.Text
-    title.Text = "RADAR"
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.ZIndex = 41
-    title.Parent = radarFrame
-
-    local circle = Instance.new("Frame")
-    circle.AnchorPoint = Vector2.new(0.5, 0.5)
-    circle.Position = UDim2.new(0.5, 0, 0.56, 0)
-    circle.Size = UDim2.fromOffset(142, 142)
-    circle.BackgroundTransparency = 1
-    circle.BorderSizePixel = 0
-    circle.ZIndex = 41
-    circle.Parent = radarFrame
-    NewCorner(9999, circle)
-    NewStroke(circle, CONFIG.Colors.Stroke, 1, 0.25)
-
-    local ring = Instance.new("Frame")
-    ring.AnchorPoint = Vector2.new(0.5, 0.5)
-    ring.Position = UDim2.fromScale(0.5, 0.5)
-    ring.Size = UDim2.fromOffset(70, 70)
-    ring.BackgroundTransparency = 1
-    ring.BorderSizePixel = 0
-    ring.ZIndex = 41
-    ring.Parent = circle
-    NewCorner(9999, ring)
-    NewStroke(ring, CONFIG.Colors.Stroke, 1, 0.45)
-
-    local center = Instance.new("Frame")
-    center.AnchorPoint = Vector2.new(0.5, 0.5)
-    center.Position = UDim2.fromScale(0.5, 0.5)
-    center.Size = UDim2.fromOffset(6, 6)
-    center.BackgroundColor3 = CONFIG.Colors.Text
-    center.BorderSizePixel = 0
-    center.ZIndex = 43
-    center.Parent = circle
-    NewCorner(99, center)
-
-    local frontLine = Instance.new("Frame")
-    frontLine.AnchorPoint = Vector2.new(0.5, 0.5)
-    frontLine.Position = UDim2.fromScale(0.5, 0.5)
-    frontLine.Size = UDim2.new(0, 1, 1, 0)
-    frontLine.BackgroundColor3 = CONFIG.Colors.Stroke
-    frontLine.BackgroundTransparency = 0.65
-    frontLine.BorderSizePixel = 0
-    frontLine.ZIndex = 41
-    frontLine.Parent = circle
-
-    local sideLine = Instance.new("Frame")
-    sideLine.AnchorPoint = Vector2.new(0.5, 0.5)
-    sideLine.Position = UDim2.fromScale(0.5, 0.5)
-    sideLine.Size = UDim2.new(1, 0, 0, 1)
-    sideLine.BackgroundColor3 = CONFIG.Colors.Stroke
-    sideLine.BackgroundTransparency = 0.65
-    sideLine.BorderSizePixel = 0
-    sideLine.ZIndex = 41
-    sideLine.Parent = circle
-
-    local markers = {}
-
-    local function getMarker(plr)
-        local marker = markers[plr]
-        if marker and marker.Parent then return marker end
-        marker = Instance.new("TextLabel")
-        marker.Name = "RadarPlayer"
-        marker.AnchorPoint = Vector2.new(0.5, 0.5)
-        marker.Size = UDim2.fromOffset(20, 20)
-        marker.BackgroundTransparency = 1
-        marker.Font = Enum.Font.GothamBold
-        marker.TextSize = 16
-        marker.Text = "➤"
-        marker.TextStrokeTransparency = 0.15
-        marker.TextXAlignment = Enum.TextXAlignment.Center
-        marker.TextYAlignment = Enum.TextYAlignment.Center
-        marker.ZIndex = 44
-        marker.Parent = circle
-        markers[plr] = marker
-        return marker
-    end
-
-    local function radarColor(distance)
-        local ratio = math.clamp(distance / math.max(State.Sliders.RadarRange, 1), 0, 1)
-        local proximity = 1 - ratio
-        return Color3.fromHSV(0.33 - (0.33 * proximity), 0.95, 1)
-    end
-
-    State.UpdateRadar = function()
-        radarFrame.Visible = State.Features.Radar
-        if not State.Features.Radar or not Camera then
-            for _, marker in pairs(markers) do
-                marker.Visible = false
-            end
-            return
-        end
-
-        local camPos = Camera.CFrame.Position
-        local look = Camera.CFrame.LookVector
-        local right = Camera.CFrame.RightVector
-        local horizontalLook = Vector3.new(look.X, 0, look.Z)
-        local horizontalRight = Vector3.new(right.X, 0, right.Z)
-        if horizontalLook.Magnitude > 0 then horizontalLook = horizontalLook.Unit end
-        if horizontalRight.Magnitude > 0 then horizontalRight = horizontalRight.Unit end
-
-        local radarCenter = Vector2.new(71, 79)
-        local radius = 63
-        local used = {}
-
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr ~= LocalPlayer then
-                local char = plr.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                local hum = char and char:FindFirstChildOfClass("Humanoid")
-                if root and hum and hum.Health > 0 then
-                    local rel = root.Position - camPos
-                    local flat = Vector3.new(rel.X, 0, rel.Z)
-                    local distance = flat.Magnitude
-                    if distance <= math.max(State.Sliders.RadarRange, 1) then
-                        local x = horizontalRight:Dot(flat)
-                        local forward = horizontalLook:Dot(flat)
-                        local y = -forward
-                        local mag = math.sqrt(x * x + y * y)
-                        if mag > 0 then
-                            local scale = math.min(1, radius / mag)
-                            x *= scale
-                            y *= scale
-                        end
-                        local marker = getMarker(plr)
-                        marker.Visible = true
-                        marker.Position = UDim2.fromOffset(radarCenter.X + x, radarCenter.Y + y)
-                        marker.TextColor3 = radarColor(distance)
-                        marker.Rotation = math.deg(math.atan2(y, x)) + 90
-                        marker.Text = math.abs(forward) < 1 and "•" or "➤"
-                        used[plr] = true
-                    end
-                end
-            end
-        end
-
-        for plr, marker in pairs(markers) do
-            if not used[plr] then marker.Visible = false end
-        end
-    end
-
-    Players.PlayerRemoving:Connect(function(plr)
-        local marker = markers[plr]
-        if marker then marker:Destroy() end
-        markers[plr] = nil
-    end)
-end
-
 local FreecamStatusLabel = Instance.new("TextLabel")
 FreecamStatusLabel.AnchorPoint = Vector2.new(0.5, 1)
 FreecamStatusLabel.Position = UDim2.new(0.5, 0, 1, -12)
@@ -3619,107 +3440,6 @@ end)
 
 do
     local page = Pages.Visuals
-
-    local overview = Instance.new("Frame")
-    overview.Size = UDim2.new(1, 0, 0, 74)
-    overview.BackgroundTransparency = 1
-    overview.LayoutOrder = -5
-    overview.Parent = page
-
-    local overviewLayout = Instance.new("UIListLayout")
-    overviewLayout.FillDirection = Enum.FillDirection.Horizontal
-    overviewLayout.Padding = UDim.new(0, 12)
-    overviewLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    overviewLayout.Parent = overview
-
-    local function makeOverviewCard(titleText, subtitleText, order)
-        local card = Instance.new("Frame")
-        card.Size = UDim2.new(1/3, -8, 1, 0)
-        card.BackgroundColor3 = CONFIG.Colors.Panel
-        card.BackgroundTransparency = 0.02
-        card.BorderSizePixel = 0
-        card.LayoutOrder = order
-        card.Parent = overview
-        NewCorner(10, card)
-        NewStroke(card, CONFIG.Colors.Stroke, 1, 0.35)
-
-        local title = Instance.new("TextLabel")
-        title.BackgroundTransparency = 1
-        title.Position = UDim2.fromOffset(14, 11)
-        title.Size = UDim2.new(1, -28, 0, 20)
-        title.Font = Enum.Font.GothamMedium
-        title.TextSize = 13
-        title.TextColor3 = CONFIG.Colors.Text
-        title.TextXAlignment = Enum.TextXAlignment.Left
-        title.Text = titleText
-        title.Parent = card
-
-        local sub = Instance.new("TextLabel")
-        sub.BackgroundTransparency = 1
-        sub.Position = UDim2.fromOffset(14, 34)
-        sub.Size = UDim2.new(1, -28, 0, 18)
-        sub.Font = Enum.Font.Gotham
-        sub.TextSize = 11
-        sub.TextColor3 = CONFIG.Colors.SubText
-        sub.TextXAlignment = Enum.TextXAlignment.Left
-        sub.Text = subtitleText
-        sub.Parent = card
-    end
-
-    makeOverviewCard("ESP", "Player highlighting", 1)
-    makeOverviewCard("Chams", "Character overlays", 2)
-    makeOverviewCard("FOV", "Configurable aim area", 3)
-
-    local preview = Instance.new("Frame")
-    preview.Size = UDim2.new(1, 0, 0, 170)
-    preview.BackgroundColor3 = Color3.fromRGB(12, 14, 18)
-    preview.BorderSizePixel = 0
-    preview.LayoutOrder = -4
-    preview.Parent = page
-    NewCorner(10, preview)
-    NewStroke(preview, CONFIG.Colors.Stroke, 1, 0.3)
-
-    local previewTitle = Instance.new("TextLabel")
-    previewTitle.BackgroundTransparency = 1
-    previewTitle.Position = UDim2.fromOffset(16, 12)
-    previewTitle.Size = UDim2.new(1, -32, 0, 22)
-    previewTitle.Font = Enum.Font.GothamBold
-    previewTitle.TextSize = 13
-    previewTitle.TextColor3 = CONFIG.Colors.Text
-    previewTitle.TextXAlignment = Enum.TextXAlignment.Left
-    previewTitle.Text = "Preview"
-    previewTitle.Parent = preview
-
-    local previewCircle = Instance.new("Frame")
-    previewCircle.AnchorPoint = Vector2.new(0.5, 0.5)
-    previewCircle.Position = UDim2.new(0.5, 0, 0.54, 0)
-    previewCircle.Size = UDim2.fromOffset(120, 120)
-    previewCircle.BackgroundTransparency = 1
-    previewCircle.BorderSizePixel = 0
-    previewCircle.Parent = preview
-    NewCorner(9999, previewCircle)
-    NewStroke(previewCircle, CONFIG.Colors.Accent, 1.5, 0.1)
-
-    local previewDot = Instance.new("Frame")
-    previewDot.AnchorPoint = Vector2.new(0.5, 0.5)
-    previewDot.Position = UDim2.fromScale(0.5, 0.5)
-    previewDot.Size = UDim2.fromOffset(8, 8)
-    previewDot.BackgroundColor3 = CONFIG.Colors.AimTarget
-    previewDot.BorderSizePixel = 0
-    previewDot.Parent = preview
-    NewCorner(99, previewDot)
-
-    local previewHint = Instance.new("TextLabel")
-    previewHint.BackgroundTransparency = 1
-    previewHint.AnchorPoint = Vector2.new(0.5, 1)
-    previewHint.Position = UDim2.new(0.5, 0, 1, -8)
-    previewHint.Size = UDim2.fromOffset(420, 18)
-    previewHint.Font = Enum.Font.Gotham
-    previewHint.TextSize = 10
-    previewHint.TextColor3 = CONFIG.Colors.SubText
-    previewHint.Text = "Live targeting / visual diagnostics"
-    previewHint.Parent = preview
-
     CreateSectionLabel(page, "ESP", 1)
     CreateToggle(page, "Player ESP (name + distance + HP)", false, 2, function(v)
         State.Features.ESP = v
@@ -3772,19 +3492,6 @@ do
     end, "Tracers", "Tracer")
     CreateSlider(page, "Max ESP distance", 50, 1000, State.Sliders.ESPDistance, 9, function(v)
         State.Sliders.ESPDistance = v
-    end)
-    CreateToggle(page, "Skeleton Visibility Check", State.Features.SkeletonVisibilityCheck, 10, function(v)
-        State.Features.SkeletonVisibilityCheck = v
-    end, "SkeletonVisibilityCheck", "SkeletonVisible")
-    CreateToggle(page, "Head Target Indicator", State.Features.HeadTargetIndicator, 11, function(v)
-        State.Features.HeadTargetIndicator = v
-    end, "HeadTargetIndicator", "HeadTarget")
-    CreateToggle(page, "Radar", State.Features.Radar, 12, function(v)
-        State.Features.Radar = v
-        if State.UpdateRadar then State.UpdateRadar() end
-    end, "Radar")
-    CreateSlider(page, "Radar Range", 50, 1000, State.Sliders.RadarRange, 13, function(v)
-        State.Sliders.RadarRange = v
     end)
 end
 
@@ -3891,56 +3598,6 @@ do
     CreateSlider(page, "Silent Aim Prediction Amount", 0, 0.5, State.Sliders.SilentAimPredictionAmount, 35, function(v)
         State.Sliders.SilentAimPredictionAmount = v
     end, 2)
-
-    CreateSectionLabel(page, "Quick Combat", -20)
-    local function SetToggleByName(name, value)
-        for _, entry in ipairs(ToggleRefs) do
-            if entry.name == name and entry.ref and entry.ref.SetState then
-                entry.ref.SetState(value)
-                return true
-            end
-        end
-        return false
-    end
-
-    CreateActionButton(page, "Basic Aimbot preset", -19, function()
-        SetToggleByName("Enable Aimbot", true)
-        SetToggleByName("Always On", false)
-        SetToggleByName("Use Custom Activation Key", false)
-        SetToggleByName("Team Check", true)
-        SetToggleByName("Wall Check", true)
-        SetToggleByName("Show FOV Circle", true)
-        SetToggleByName("Enable Triggerbot", false)
-        SetToggleByName("Enable Silent Aim", false)
-        if Notify then Notify("Combat", "Basic Aimbot preset applied.", true) end
-    end)
-
-    CreateActionButton(page, "Basic Triggerbot preset", -18, function()
-        SetToggleByName("Enable Triggerbot", true)
-        SetToggleByName("Triggerbot Always On", true)
-        SetToggleByName("Triggerbot Team Check", true)
-        SetToggleByName("Triggerbot Wall Check", true)
-        SetToggleByName("Use Crosshair", true)
-        SetToggleByName("Enable Aimbot", false)
-        SetToggleByName("Enable Silent Aim", false)
-        if Notify then Notify("Combat", "Basic Triggerbot preset applied.", true) end
-    end)
-
-    CreateActionButton(page, "Full Combat preset", -17, function()
-        SetToggleByName("Enable Aimbot", true)
-        SetToggleByName("Team Check", true)
-        SetToggleByName("Wall Check", true)
-        SetToggleByName("Show FOV Circle", true)
-        SetToggleByName("Enable Triggerbot", true)
-        SetToggleByName("Triggerbot Always On", true)
-        SetToggleByName("Triggerbot Team Check", true)
-        SetToggleByName("Triggerbot Wall Check", true)
-        SetToggleByName("Use Crosshair", true)
-        SetToggleByName("Enable Silent Aim", true)
-        SetToggleByName("Silent Aim Team Check", true)
-        SetToggleByName("Silent Aim Wall Check", true)
-        if Notify then Notify("Combat", "Full Combat preset applied.", true) end
-    end
 end
 
 
@@ -4568,7 +4225,7 @@ pcall(RefreshToolViewer)
 SavedConfigs, ConfigStore = {}, {
     Root = "BravoHack",
     Configs = "BravoHack/Configs",
-    Version = "v1.0.8",
+    Version = "v1.0.6",
     KeyFile = "BravoHack/key.json",
     MetaFile = "BravoHack/settings.json",
 }
@@ -5692,11 +5349,7 @@ RunService.Heartbeat:Connect(function(dt)
                             if length > 1 then
                                 local midX, midY = (sa.X + sb.X) * 0.5, (sa.Y + sb.Y) * 0.5
                                 local rotation = math.deg(math.atan2(-dx, dy))
-                                local visibilityCheck = State.Features.SkeletonVisibilityCheck and AimTargetVisible(b, true)
-                                local skeletonColor = protected and CONFIG.Colors.ProtectedESP
-                                    or (State.Features.SkeletonVisibilityCheck and (visibilityCheck and CONFIG.Colors.SkeletonVisible or CONFIG.Colors.SkeletonHidden) or CONFIG.Colors.Skeleton)
-                                frame.BackgroundColor3 = skeletonColor
-                                if glow then glow.BackgroundColor3 = skeletonColor end
+                                frame.BackgroundColor3 = protected and CONFIG.Colors.ProtectedESP or CONFIG.Colors.Skeleton
                                 frame.Size = UDim2.fromOffset(2, length)
                                 frame.Position = UDim2.fromOffset(midX, midY)
                                 frame.Rotation = rotation
