@@ -584,7 +584,7 @@ local function LoadRememberedKey()
         return game:GetService("HttpService"):JSONDecode(raw)
     end)
     if decodeOk and type(data) == "table" and type(data.Key) == "string" then
-        return data.Key:gsub("%s+", ""):upper()
+        return data.Key:gsub("%s+", "")
     end
     return nil
 end
@@ -731,7 +731,7 @@ SubmitKey = function()
     if KeyGate.InteractionBusy or State.KeyAuthorized or _G.__BravoHackUnloaded then return end
 
     local key = tostring(KeyGate.Input.Text or "")
-    key = key:gsub("%s+", ""):upper()
+    key = key:gsub("%s+", "")
 
     if key == "" then
         KeyGate.Status.Text = "Enter a key first."
@@ -857,7 +857,7 @@ task.spawn(function()
     if State.Features.AutoRememberKey then
         local remembered = LoadRememberedKey()
         if remembered then
-            local valid, message = AuthorizeKeyWithServer(remembered)
+            local valid, message = AuthorizeKeyWithAPI(remembered)
             if valid then
                 KeyGate.Input.Text = remembered
                 KeyGate.Status.Text = "Remembered key accepted for UserId " .. tostring(LocalPlayer.UserId) .. "."
