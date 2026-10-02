@@ -1,7 +1,7 @@
 # BravoHack — Cheat Menu
 
 > **Roblox cheat menu / client-side executor UI**  
-> Current release: **v1.0.7**
+> Current release: **v1.0.8**
 
 ![BravoHack overview](assets/overview.svg)
 
@@ -38,7 +38,7 @@ BravoHack is a modular Roblox Lua cheat menu designed for an executor/client-sid
 | Area | Included |
 |---|---|
 | UI | Dark themed tabbed interface |
-| Visuals | ESP, Box ESP, healthbars, skeletons, tracers, chams |
+| Visuals | ESP, Box ESP, healthbars, skeletons, tracers, chams, skeleton visibility check, head target indicator, radar |
 | Aiming | Aim Assist, Aimbot, Silent Aim |
 | Triggerbot | FOV, delay, cooldown, hit chance and crosshair mode |
 | Movement | Infinite Jump, Bunny Hop, Noclip, Fly, Freecam |
@@ -54,7 +54,7 @@ BravoHack is a modular Roblox Lua cheat menu designed for an executor/client-sid
 
 ## Interface
 
-BravoHack uses a dark, rounded-window cheat-menu layout with a compact top navigation bar. The v1.0.7 UI refresh follows the supplied reference: large centered menu, clean header, subtle borders, tab navigation, roomy feature cards, and compact status information.
+BravoHack uses a dark, rounded-window cheat-menu layout with a compact top navigation bar. The v1.0.8 UI refresh follows the supplied reference: large centered menu, clean header, subtle borders, tab navigation, roomy feature cards, and compact status information.
 
 ![BravoHack interface](assets/overview.svg)
 
@@ -85,8 +85,11 @@ The Visuals section contains player-rendering and targeting visuals.
 - Box ESP
 - Healthbar
 - Skeleton ESP
+- Skeleton Visibility Check: visible targets use a visibility color; blocked targets use a hidden color
+- Head Target Indicator: the skeleton head marker changes color when the cursor is aligned with the head
 - Tracers
-- Configurable ESP distance
+- Radar: circular player positions with front/back direction and distance colors
+- Configurable ESP distance and Radar range
 
 ### Chams
 
@@ -512,7 +515,7 @@ These files are portable, version-controlled visual references for the menu and 
 
 # Version
 
-**v1.0.7**
+**v1.0.8**
 
 Latest documented changes include:
 
