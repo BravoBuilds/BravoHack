@@ -1,7 +1,7 @@
 # BravoHack — Cheat Menu
 
 > **Roblox cheat menu / client-side executor UI**  
-> Current release: **v1.0.8**
+> Current release: **v1.0.9**
 
 ![BravoHack overview](assets/overview.svg)
 
@@ -46,7 +46,7 @@ BravoHack is a modular Roblox Lua cheat menu designed for an executor/client-sid
 | World | Fullbright, fog control, gravity, camera FOV and time controls |
 | Utility | Player List, Chat Log, Tool Viewer, Spectate |
 | Config | Named JSON configs with persistent executor storage |
-| Key system | Key gate + optional remembered key |
+| Key system | Server-authoritative keys bound to Roblox UserId |
 | Lua | GitHub module browser and runtime |
 | Modules | Built-in `InventoryView.lua` example |
 
@@ -337,7 +337,7 @@ The Get Key flow references the repository's:
 Keys.txt
 ```
 
-The remembered key is stored locally through the executor's file system when the option is enabled.
+The client displays the immutable Roblox `Player.UserId` used for the binding. The server is authoritative: it reads the real `player.UserId`, so the client cannot choose a different binding ID. The remembered key is still stored locally through the executor's file system when enabled, but every automatic login is revalidated by the server.
 
 ---
 
@@ -515,7 +515,7 @@ These files are portable, version-controlled visual references for the menu and 
 
 # Version
 
-**v1.0.8**
+**v1.0.9**
 
 Latest documented changes include:
 
