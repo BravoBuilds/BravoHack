@@ -1,5 +1,5 @@
 -- BravoHack v1.0.9
--- Server-authoritative key binding by immutable Roblox UserId with one-time key claiming.
+-- External API key binding by immutable Roblox UserId with one-time key claiming.
 
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
@@ -554,9 +554,7 @@ UI.ProfileName.Parent = UI.StatusBar
 
 UI.StatusLabel = UI.ProfileName
 
-KeyGate.SourceURL = "https://raw.githubusercontent.com/BravoBuilds/BravoHack/refs/heads/main/Keys.txt"
-KeyGate.ValidKeys = {}
-KeyGate.KeysLoaded = false
+KeyGate.ApiURL = "https://YOUR-VERCEL-PROJECT.vercel.app/api/key"
 
 local function LoadPersistentSettings()
     if type(isfile) ~= "function" or type(readfile) ~= "function" then return end
@@ -613,81 +611,83 @@ local function SetKeyGateVisible(visible)
     end
 end
 
-local function LoadKeysFromURL()
-    local body
-    local requestFn
+local function GetRequestFunction()
     if type(request) == "function" then
-        requestFn = request
+        return request
     elseif type(http_request) == "function" then
-        requestFn = http_request
+        return http_request
     elseif type(syn) == "table" and type(syn.request) == "function" then
-        requestFn = syn.request
+        return syn.request
     end
-
-    if requestFn then
-        local requestOk, response = pcall(function()
-            return requestFn({
-                Url = KeyGate.SourceURL,
-                Method = "GET",
-            })
-        end)
-        if requestOk and type(response) == "table" then
-            body = response.Body
-        end
-    end
-
-    if type(body) ~= "string" or body == "" then
-        pcall(function()
-            body = game:HttpGet(KeyGate.SourceURL, true)
-        end)
-    end
-
-    if type(body) == "string" and body ~= "" then
-        local loaded = {}
-        local found = 0
-        for line in body:gmatch("[^\r\n]+") do
-            local key = line:gsub("%s+", "")
-            if key ~= "" and not key:match("^#") then
-                loaded[key:upper()] = true
-                found += 1
-            end
-        end
-        if found > 0 then
-            KeyGate.ValidKeys = loaded
-            KeyGate.KeysLoaded = true
-            return true
-        end
-    end
-
-    KeyGate.ValidKeys = {}
-    KeyGate.KeysLoaded = false
-    return false
+    return nil
 end
 
-function AuthorizeKeyWithServer(key)
-    local replicatedStorage = game:GetService("ReplicatedStorage")
-    local remote = replicatedStorage:FindFirstChild("BravoHackKeyAuth")
-
-    if not remote then
-        local ok, waited = pcall(function()
-            return replicatedStorage:WaitForChild("BravoHackKeyAuth", 8)
-        end)
-        if ok then remote = waited end
+local function AuthorizeKeyWithAPI(key)
+    local requestFn = GetRequestFunction()
+    if not requestFn then
+        return false, "HTTP requests are unavailable in this executor."
     end
 
-    if not remote or not remote:IsA("RemoteFunction") then
-        return false, "Key server is not installed."
+    local HttpService = game:GetService("HttpService")
+    local okEncode, body = pcall(function()
+        return HttpService:JSONEncode({
+            key = key,
+            userId = tostring(LocalPlayer.UserId),
+        })
+    end)
+    if not okEncode then
+        return false, "Failed to encode API request."
     end
 
-    local ok, allowed, message = pcall(function()
-        return remote:InvokeServer(key)
+    local okRequest, response = pcall(function()
+        return requestFn({
+            Url = KeyGate.ApiURL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json",
+                ["Accept"] = "application/json",
+            },
+            Body = body,
+        })
     end)
 
-    if not ok then
-        return false, "Key server connection failed."
+    if not okRequest or type(response) ~= "table" then
+        return false, "Key API connection failed."
     end
 
-    return allowed == true, tostring(message or (allowed and "Access granted." or "Access denied."))
+    local statusCode = tonumber(response.StatusCode or response.Status or 0) or 0
+    local responseBody = response.Body
+    if type(responseBody) ~= "string" or responseBody == "" then
+        return false, statusCode >= 500 and "Key API is temporarily unavailable." or "Key API returned an empty response."
+    end
+
+    local decodeOk, data = pcall(function()
+        return HttpService:JSONDecode(responseBody)
+    end)
+    if not decodeOk or type(data) ~= "table" then
+        return false, "Key API returned invalid JSON."
+    end
+
+    if statusCode == 200 and data.ok == true then
+        if data.claimed == true then
+            return true, "Access granted. Key is now bound to your Roblox UserId."
+        end
+        return true, "Access granted. Key is already bound to your Roblox UserId."
+    end
+
+    if statusCode == 404 and data.error == "INVALID_KEY" then
+        return false, "Invalid key."
+    end
+
+    if statusCode == 409 and data.error == "KEY_ALREADY_USED" then
+        return false, "This key is already bound to another Roblox UserId."
+    end
+
+    if statusCode >= 500 then
+        return false, "Key API is temporarily unavailable."
+    end
+
+    return false, tostring(data.message or data.error or "Key authorization failed.")
 end
 
 local function OpenAuthorizedMenu()
@@ -741,10 +741,10 @@ SubmitKey = function()
     end
 
     KeyGate.InteractionBusy = true
-    KeyGate.Status.Text = "Binding key to this Roblox UserId..."
+    KeyGate.Status.Text = "Checking key with external API..."
     KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
 
-    local valid, message = AuthorizeKeyWithServer(key)
+    local valid, message = AuthorizeKeyWithAPI(key)
     KeyGate.InteractionBusy = false
 
     if not valid then
@@ -801,7 +801,7 @@ local function CopyKeyLink()
     local copied = false
     local function tryClipboard(fn)
         if type(fn) ~= "function" then return end
-        local ok = pcall(function() fn(KeyGate.SourceURL) end)
+        local ok = pcall(function() fn(KeyGate.ApiURL) end)
         if ok then copied = true end
     end
     tryClipboard(setclipboard)
@@ -810,7 +810,7 @@ local function CopyKeyLink()
     if not copied then tryClipboard(writeclipboard) end
 
     if copied then
-        KeyGate.Status.Text = "Key list link copied. Keys are server-bound after first use."
+        KeyGate.Status.Text = "Key API link copied. Keys are API-bound after first use."
         KeyGate.Status.TextColor3 = CONFIG.Colors.Green
     else
         KeyGate.Status.Text = "Clipboard is unavailable in this environment."
