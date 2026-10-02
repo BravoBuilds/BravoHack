@@ -2,7 +2,6 @@
 -- External API key binding by immutable Roblox UserId with one-time key claiming.
 
 local Players           = game:GetService("Players")
-local TeleportService   = game:GetService("TeleportService")
 local RunService         = game:GetService("RunService")
 local UserInputService   = game:GetService("UserInputService")
 local GuiService         = game:GetService("GuiService")
@@ -132,7 +131,6 @@ local State = {
         SilentAimWallCheck = false,
         SilentAimPrediction = false,
         ForceField = false,
-        AutoRevive = false,
         HideFreecamBar = false,
         TeamCheck = false,
         WallCheck = false,
@@ -210,57 +208,6 @@ local EnableFly, DisableFly
 local EnableGodMode, DisableGodMode
 local EnableFreecam, DisableFreecam
 local ApplyMovementSettings, ApplyFullbright, ApplyRemoveFog
-
-local EnableAutoRevive, DisableAutoRevive
-
-EnableAutoRevive = function()
-    if State.AutoReviveConnection then
-        pcall(function() State.AutoReviveConnection:Disconnect() end)
-        State.AutoReviveConnection = nil
-    end
-
-    local function watchCharacter(char)
-        if not State.Features.AutoRevive or not char then return end
-        local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 10)
-        if not hum then return end
-
-        State.AutoReviveConnection = hum.Died:Connect(function()
-            if not State.Features.AutoRevive then return end
-
-            task.delay(1, function()
-                if not State.Features.AutoRevive then return end
-                local current = LocalPlayer.Character
-                local currentHum = current and current:FindFirstChildOfClass("Humanoid")
-
-                if currentHum and currentHum.Health > 0 then return end
-
-                pcall(function()
-                    TeleportService:Teleport(game.PlaceId)
-                end)
-            end)
-        end)
-    end
-
-    State.AutoReviveCharacterConnection = LocalPlayer.CharacterAdded:Connect(function(char)
-        watchCharacter(char)
-    end)
-
-    if LocalPlayer.Character then
-        watchCharacter(LocalPlayer.Character)
-    end
-end
-
-DisableAutoRevive = function()
-    if State.AutoReviveConnection then
-        pcall(function() State.AutoReviveConnection:Disconnect() end)
-        State.AutoReviveConnection = nil
-    end
-    if State.AutoReviveCharacterConnection then
-        pcall(function() State.AutoReviveCharacterConnection:Disconnect() end)
-        State.AutoReviveCharacterConnection = nil
-    end
-end
-
 
 local TI_FAST = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local TI_MED  = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -3994,21 +3941,17 @@ do
         State.Features.ForceField = v
         if v then EnableForceField() else DisableForceField() end
     end, "ForceField")
-    CreateToggle(page, "Auto Revive", false, 5, function(v)
-        State.Features.AutoRevive = v
-        if v then EnableAutoRevive() else DisableAutoRevive() end
-    end, "AutoRevive")
-    CreateSlider(page, "Camera FOV", 30, 120, State.Sliders.CameraFOV, 6, function(v)
+    CreateSlider(page, "Camera FOV", 30, 120, State.Sliders.CameraFOV, 5, function(v)
         State.Sliders.CameraFOV = v
         if Camera then Camera.FieldOfView = v end
     end)
-    CreateActionButton(page, "Teleport to Spawn", 7, function()
+    CreateActionButton(page, "Teleport to Spawn", 6, function()
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local spawnPoint = Workspace:FindFirstChildWhichIsA("SpawnLocation", true)
         if hrp and spawnPoint then hrp.CFrame = spawnPoint.CFrame + Vector3.new(0, 5, 0) end
     end, "TeleportSpawn")
-    CreateActionButton(page, "Teleport to Freecam camera", 8, TeleportToFreecamCamera, "FreecamTeleport")
+    CreateActionButton(page, "Teleport to Freecam camera", 7, TeleportToFreecamCamera, "FreecamTeleport")
 end
 
 do
