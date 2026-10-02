@@ -8,7 +8,8 @@ local GuiService         = game:GetService("GuiService")
 local ContextActionService = game:GetService("ContextActionService")
 local TweenService       = game:GetService("TweenService")
 local Lighting            = game:GetService("Lighting")
-local Workspace           = game:GetService("Workspace")
+local Workspace           = game:Ge
+tService("Workspace")
 local TextChatService      = game:GetService("TextChatService")
 local ChatInputBarConfiguration = TextChatService:FindFirstChild("ChatInputBarConfiguration")
 
@@ -563,7 +564,7 @@ UI.ProfileName.Parent = UI.StatusBar
 
 UI.StatusLabel = UI.ProfileName
 
-KeyGate.ApiURL = "https://bravohack.tmneijsel.workers.dev"
+KeyGate.ApiURL = "https://bravohack.tmneijsel.workers.dev/"
 
 local function LoadPersistentSettings()
     if type(isfile) ~= "function" or type(readfile) ~= "function" then return end
