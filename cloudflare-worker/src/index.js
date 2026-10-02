@@ -42,7 +42,7 @@ async function getKeyInfo(key) {
   if (!response.ok) return null;
 
   const text = await response.text();
-  for (const line of text.split(/\\r?\\n/)) {
+  for (const line of text.split(/\r?\n/)) {
     const parts = line.split("|").map(part => part.trim());
     if (!parts[0]) continue;
     if (parts[0].toLowerCase() !== key.toLowerCase()) continue;
@@ -69,9 +69,10 @@ async function handlePost(request, env) {
   if (!keyInfo) return json({ ok:false, error:"INVALID_KEY" }, 404);
   if (keyInfo.invalidDuration) return json({ ok:false, error:"INVALID_KEY_DURATION" }, 500);
 
+  const canonicalKey = keyInfo.key;
   await ensureSchema(env.DB);
 
-  const existing = await env.DB.prepare("SELECT user_id, claimed_at, expires_at FROM key_claims WHERE key = ?").bind(key).first();
+  const existing = await env.DB.prepare("SELECT user_id, claimed_at, expires_at FROM key_claims WHERE key = ?").bind(canonicalKey).first();
   if (existing?.expires_at && Date.parse(existing.expires_at) <= Date.now()) {
     return json({ ok:false, error:"KEY_EXPIRED", expiredAt:existing.expires_at }, 410);
   }
@@ -81,9 +82,9 @@ async function handlePost(request, env) {
 
   // The primary key makes the first claim win atomically.
   await env.DB.prepare("INSERT OR IGNORE INTO key_claims (key, user_id, claimed_at, expires_at) VALUES (?, ?, ?, ?)")
-    .bind(key, userId, claimedAt, expiresAt).run();
+    .bind(canonicalKey, userId, claimedAt, expiresAt).run();
 
-  const row = await env.DB.prepare("SELECT user_id, claimed_at, expires_at FROM key_claims WHERE key = ?").bind(key).first();
+  const row = await env.DB.prepare("SELECT user_id, claimed_at, expires_at FROM key_claims WHERE key = ?").bind(canonicalKey).first();
   if (!row) return json({ ok:false, error:"DATABASE_ERROR" }, 500);
 
   if (String(row.user_id) !== userId) {
@@ -94,7 +95,7 @@ async function handlePost(request, env) {
     return json({ ok:false, error:"KEY_EXPIRED", expiredAt:row.expires_at }, 410);
   }
 
-  return json({ ok:true, claimed:!existing, key, userId, claimedAt:row.claimed_at, expiresAt:row.expires_at, permanent:!row.expires_at });
+  return json({ ok:true, claimed:!existing, key:canonicalKey, userId, claimedAt:row.claimed_at, expiresAt:row.expires_at, permanent:false });
 }
 
 async function handleList(env) {
