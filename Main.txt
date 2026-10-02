@@ -2,6 +2,7 @@
 -- External API key binding by immutable Roblox UserId with one-time key claiming.
 
 local Players           = game:GetService("Players")
+local TeleportService   = game:GetService("TeleportService")
 local RunService         = game:GetService("RunService")
 local UserInputService   = game:GetService("UserInputService")
 local GuiService         = game:GetService("GuiService")
@@ -131,6 +132,7 @@ local State = {
         SilentAimWallCheck = false,
         SilentAimPrediction = false,
         ForceField = false,
+        AutoRevive = false,
         HideFreecamBar = false,
         TeamCheck = false,
         WallCheck = false,
@@ -208,6 +210,68 @@ local EnableFly, DisableFly
 local EnableGodMode, DisableGodMode
 local EnableFreecam, DisableFreecam
 local ApplyMovementSettings, ApplyFullbright, ApplyRemoveFog
+
+local EnableAutoRevive, DisableAutoRevive
+
+local function ForceRespawn()
+    local ok = pcall(function()
+        TeleportService:Teleport(game.PlaceId, LocalPlayer)
+    end)
+    return ok
+end
+
+EnableAutoRevive = function()
+    DisableAutoRevive()
+    local reviveState = { Connections = {}, Triggered = false }
+    State.AutoReviveState = reviveState
+
+    local function watchCharacter(char)
+        if not char or reviveState.Triggered then return end
+        local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 8)
+        if not hum or reviveState.Triggered then return end
+
+        local conn = hum.Died:Connect(function()
+            if not State.Features.AutoRevive or reviveState.Triggered then return end
+            reviveState.Triggered = true
+
+            task.delay(1.25, function()
+                if not State.Features.AutoRevive then return end
+
+                local current = LocalPlayer.Character
+                local currentHum = current and current:FindFirstChildOfClass("Humanoid")
+                if currentHum and currentHum.Health > 0 then
+                    reviveState.Triggered = false
+                    return
+                end
+
+                ForceRespawn()
+            end)
+        end)
+
+        table.insert(reviveState.Connections, conn)
+    end
+
+    local charConn = LocalPlayer.CharacterAdded:Connect(function(char)
+        reviveState.Triggered = false
+        watchCharacter(char)
+    end)
+    table.insert(reviveState.Connections, charConn)
+
+    if LocalPlayer.Character then
+        watchCharacter(LocalPlayer.Character)
+    end
+end
+
+DisableAutoRevive = function()
+    local reviveState = State.AutoReviveState
+    State.AutoReviveState = nil
+    if reviveState and reviveState.Connections then
+        for _, conn in ipairs(reviveState.Connections) do
+            pcall(function() conn:Disconnect() end)
+        end
+    end
+end
+
 
 local TI_FAST = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local TI_MED  = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
@@ -3941,17 +4005,21 @@ do
         State.Features.ForceField = v
         if v then EnableForceField() else DisableForceField() end
     end, "ForceField")
-    CreateSlider(page, "Camera FOV", 30, 120, State.Sliders.CameraFOV, 5, function(v)
+    CreateToggle(page, "Auto Revive", false, 5, function(v)
+        State.Features.AutoRevive = v
+        if v then EnableAutoRevive() else DisableAutoRevive() end
+    end, "AutoRevive")
+    CreateSlider(page, "Camera FOV", 30, 120, State.Sliders.CameraFOV, 6, function(v)
         State.Sliders.CameraFOV = v
         if Camera then Camera.FieldOfView = v end
     end)
-    CreateActionButton(page, "Teleport to Spawn", 6, function()
+    CreateActionButton(page, "Teleport to Spawn", 7, function()
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
         local spawnPoint = Workspace:FindFirstChildWhichIsA("SpawnLocation", true)
         if hrp and spawnPoint then hrp.CFrame = spawnPoint.CFrame + Vector3.new(0, 5, 0) end
     end, "TeleportSpawn")
-    CreateActionButton(page, "Teleport to Freecam camera", 7, TeleportToFreecamCamera, "FreecamTeleport")
+    CreateActionButton(page, "Teleport to Freecam camera", 8, TeleportToFreecamCamera, "FreecamTeleport")
 end
 
 do
