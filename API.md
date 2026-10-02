@@ -56,4 +56,14 @@ The API is stateless/serverless; Vercel runs the endpoint on demand rather than 
 
 Because `Keys.txt` is in a public GitHub repository, the bound UserId will also be public. The GitHub token remains private in Vercel environment variables.
 
-The API is the authority for first-use binding. A purely client-side check must not be used to decide whether a key is already claimed.
+The API is the authority for first-use binding. `Main.txt` runs entirely on the Roblox client/executor and sends the current `LocalPlayer.UserId` directly to this API. No Roblox ServerScript, RemoteFunction, or DataStore is required.
+
+## Main.txt configuration
+
+Set `KeyGate.ApiURL` in `Main.txt` to your deployed Vercel URL:
+
+```lua
+KeyGate.ApiURL = "https://YOUR-VERCEL-PROJECT.vercel.app/api/key"
+```
+
+The executor must support one of `request`, `http_request`, or `syn.request`.
