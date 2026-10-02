@@ -1,9 +1,10 @@
--- BravoHack v1.0.7
--- UI refresh to match the reference layout while keeping the existing feature and module systems.
+-- BravoHack v1.0.8
+-- Stable visual diagnostics: skeleton visibility colors, crosshair head highlight, and radar.
 
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
 local UserInputService   = game:GetService("UserInputService")
+local GuiService         = game:GetService("GuiService")
 local ContextActionService = game:GetService("ContextActionService")
 local TweenService       = game:GetService("TweenService")
 local Lighting            = game:GetService("Lighting")
@@ -63,6 +64,9 @@ local CONFIG = {
         Stroke      = Color3.fromRGB(52, 52, 58),
         SwitchOff   = Color3.fromRGB(34, 34, 38),
         Skeleton    = Color3.fromRGB(80, 190, 255),
+        SkeletonVisible = Color3.fromRGB(80, 230, 125),
+        SkeletonHidden = Color3.fromRGB(235, 85, 95),
+        HeadTarget = Color3.fromRGB(255, 175, 65),
         ESPFill     = Color3.fromRGB(90, 110, 255),
         ESPOutline  = Color3.fromRGB(255, 255, 255),
         Tracer      = Color3.fromRGB(90, 110, 255),
@@ -130,6 +134,9 @@ local State = {
         HideFreecamBar = false,
         TeamCheck = false,
         WallCheck = false,
+        SkeletonVisibilityCheck = true,
+        HeadTargetIndicator = true,
+        Radar = false,
     },
     Sliders = {
         ESPDistance = 300,
@@ -151,6 +158,7 @@ local State = {
         TimeOfDay = 14,
         Gravity = 196.2,
         UIScale = 1,
+        RadarRange = 300,
     },
     Connections = {},
     ESPObjects = {},
@@ -2113,6 +2121,9 @@ Players.PlayerRemoving:Connect(function(plr)
     RemoveESPForPlayer(plr)
 end)
 
+local RadarFrame = nil
+local RadarUpdate = nil
+
 local FOVCircle = Instance.new("Frame")
 FOVCircle.AnchorPoint = Vector2.new(0.5, 0.5)
 FOVCircle.BackgroundTransparency = 1
@@ -2927,6 +2938,210 @@ function AimTargetVisible(targetPart, useWallCheck)
     return targetCharacter and result.Instance:IsDescendantOf(targetCharacter) or result.Instance == targetPart
 end
 
+do
+    local radarFrame = Instance.new("Frame")
+    radarFrame.Name = "BravoHackRadar"
+    radarFrame.AnchorPoint = Vector2.new(1, 1)
+    radarFrame.Position = UDim2.new(1, -18, 1, -44)
+    radarFrame.Size = UDim2.fromOffset(210, 210)
+    radarFrame.BackgroundColor3 = Color3.fromRGB(12, 14, 18)
+    radarFrame.BackgroundTransparency = 0.06
+    radarFrame.BorderSizePixel = 0
+    radarFrame.Visible = State.Features.Radar
+    radarFrame.ZIndex = 40
+    radarFrame.Parent = UI.Overlay
+    NewCorner(16, radarFrame)
+    NewStroke(radarFrame, CONFIG.Colors.Stroke, 1, 0.2)
+
+    local title = Instance.new("TextLabel")
+    title.BackgroundTransparency = 1
+    title.Position = UDim2.fromOffset(14, 8)
+    title.Size = UDim2.new(1, -28, 0, 18)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 11
+    title.TextColor3 = CONFIG.Colors.Text
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.Text = "RADAR"
+    title.ZIndex = 41
+    title.Parent = radarFrame
+
+    local rangeLabel = Instance.new("TextLabel")
+    rangeLabel.BackgroundTransparency = 1
+    rangeLabel.AnchorPoint = Vector2.new(1, 0)
+    rangeLabel.Position = UDim2.new(1, -14, 0, 8)
+    rangeLabel.Size = UDim2.fromOffset(80, 18)
+    rangeLabel.Font = Enum.Font.Gotham
+    rangeLabel.TextSize = 10
+    rangeLabel.TextColor3 = CONFIG.Colors.SubText
+    rangeLabel.TextXAlignment = Enum.TextXAlignment.Right
+    rangeLabel.Text = tostring(State.Sliders.RadarRange) .. " studs"
+    rangeLabel.ZIndex = 41
+    rangeLabel.Parent = radarFrame
+
+    local circle = Instance.new("Frame")
+    circle.AnchorPoint = Vector2.new(0.5, 0.5)
+    circle.Position = UDim2.new(0.5, 0, 0.55, 0)
+    circle.Size = UDim2.fromOffset(158, 158)
+    circle.BackgroundTransparency = 1
+    circle.BorderSizePixel = 0
+    circle.ZIndex = 41
+    circle.Parent = radarFrame
+    NewCorner(9999, circle)
+    NewStroke(circle, CONFIG.Colors.Stroke, 1, 0.22)
+
+    local innerRing = Instance.new("Frame")
+    innerRing.AnchorPoint = Vector2.new(0.5, 0.5)
+    innerRing.Position = UDim2.fromScale(0.5, 0.5)
+    innerRing.Size = UDim2.fromOffset(76, 76)
+    innerRing.BackgroundTransparency = 1
+    innerRing.BorderSizePixel = 0
+    innerRing.ZIndex = 41
+    innerRing.Parent = circle
+    NewCorner(9999, innerRing)
+    NewStroke(innerRing, CONFIG.Colors.Stroke, 1, 0.45)
+
+    local vertical = Instance.new("Frame")
+    vertical.AnchorPoint = Vector2.new(0.5, 0.5)
+    vertical.Position = UDim2.fromScale(0.5, 0.5)
+    vertical.Size = UDim2.new(0, 1, 1, 0)
+    vertical.BackgroundColor3 = CONFIG.Colors.Stroke
+    vertical.BackgroundTransparency = 0.62
+    vertical.BorderSizePixel = 0
+    vertical.ZIndex = 41
+    vertical.Parent = circle
+
+    local horizontal = Instance.new("Frame")
+    horizontal.AnchorPoint = Vector2.new(0.5, 0.5)
+    horizontal.Position = UDim2.fromScale(0.5, 0.5)
+    horizontal.Size = UDim2.new(1, 0, 0, 1)
+    horizontal.BackgroundColor3 = CONFIG.Colors.Stroke
+    horizontal.BackgroundTransparency = 0.62
+    horizontal.BorderSizePixel = 0
+    horizontal.ZIndex = 41
+    horizontal.Parent = circle
+
+    local center = Instance.new("Frame")
+    center.AnchorPoint = Vector2.new(0.5, 0.5)
+    center.Position = UDim2.fromScale(0.5, 0.5)
+    center.Size = UDim2.fromOffset(7, 7)
+    center.BackgroundColor3 = CONFIG.Colors.Text
+    center.BorderSizePixel = 0
+    center.ZIndex = 44
+    center.Parent = circle
+    NewCorner(99, center)
+
+    local markers = {}
+
+    local function getMarker(plr)
+        local marker = markers[plr]
+        if marker and marker.Parent then
+            return marker
+        end
+
+        marker = Instance.new("TextLabel")
+        marker.Name = "Player"
+        marker.AnchorPoint = Vector2.new(0.5, 0.5)
+        marker.Size = UDim2.fromOffset(20, 20)
+        marker.BackgroundTransparency = 1
+        marker.Font = Enum.Font.GothamBold
+        marker.TextSize = 17
+        marker.Text = "▲"
+        marker.TextStrokeTransparency = 0.2
+        marker.TextXAlignment = Enum.TextXAlignment.Center
+        marker.TextYAlignment = Enum.TextYAlignment.Center
+        marker.ZIndex = 44
+        marker.Parent = circle
+        markers[plr] = marker
+        return marker
+    end
+
+    local function getRadarColor(distance)
+        local range = math.max(1, State.Sliders.RadarRange)
+        local closeness = 1 - math.clamp(distance / range, 0, 1)
+        return Color3.fromHSV(0.33 * (1 - closeness), 0.95, 1)
+    end
+
+    RadarUpdate = function()
+        radarFrame.Visible = State.Features.Radar
+        rangeLabel.Text = tostring(math.floor(State.Sliders.RadarRange + 0.5)) .. " studs"
+
+        if not State.Features.Radar or not Camera then
+            for _, marker in pairs(markers) do
+                marker.Visible = false
+            end
+            return
+        end
+
+        local cameraCF = Camera.CFrame
+        local camPos = cameraCF.Position
+        local forward = Vector3.new(cameraCF.LookVector.X, 0, cameraCF.LookVector.Z)
+        local right = Vector3.new(cameraCF.RightVector.X, 0, cameraCF.RightVector.Z)
+
+        if forward.Magnitude < 0.001 or right.Magnitude < 0.001 then
+            return
+        end
+
+        forward = forward.Unit
+        right = right.Unit
+
+        local radarCenter = Vector2.new(79, 83)
+        local radius = 69
+        local active = {}
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer then
+                local char = plr.Character
+                local root = char and char:FindFirstChild("HumanoidRootPart")
+                local hum = char and char:FindFirstChildOfClass("Humanoid")
+
+                if root and hum and hum.Health > 0 then
+                    local flat = Vector3.new(root.Position.X - camPos.X, 0, root.Position.Z - camPos.Z)
+                    local distance = flat.Magnitude
+
+                    if distance <= math.max(1, State.Sliders.RadarRange) then
+                        local rightAmount = right:Dot(flat)
+                        local forwardAmount = forward:Dot(flat)
+
+                        local x = rightAmount
+                        local y = -forwardAmount
+                        local magnitude = math.sqrt(x * x + y * y)
+
+                        if magnitude > radius then
+                            local scale = radius / magnitude
+                            x *= scale
+                            y *= scale
+                        end
+
+                        local marker = getMarker(plr)
+                        marker.Visible = true
+                        marker.Position = UDim2.fromOffset(radarCenter.X + x, radarCenter.Y + y)
+                        marker.TextColor3 = getRadarColor(distance)
+                        marker.Rotation = math.deg(math.atan2(x, -y))
+                        active[plr] = true
+                    end
+                end
+            end
+        end
+
+        for plr, marker in pairs(markers) do
+            if not active[plr] then
+                marker.Visible = false
+            end
+        end
+    end
+
+    RadarFrame = radarFrame
+    State.UpdateRadar = RadarUpdate
+
+    Players.PlayerRemoving:Connect(function(plr)
+        local marker = markers[plr]
+        if marker then
+            marker:Destroy()
+        end
+        markers[plr] = nil
+    end)
+end
+
 local MiscUI = {}
 
 local function GetPlayerTools(plr)
@@ -3492,6 +3707,20 @@ do
     end, "Tracers", "Tracer")
     CreateSlider(page, "Max ESP distance", 50, 1000, State.Sliders.ESPDistance, 9, function(v)
         State.Sliders.ESPDistance = v
+    end)
+    CreateToggle(page, "Skeleton Visibility Check", State.Features.SkeletonVisibilityCheck, 10, function(v)
+        State.Features.SkeletonVisibilityCheck = v
+    end, "SkeletonVisibilityCheck", "SkeletonVisible")
+    CreateToggle(page, "Head Target Indicator", State.Features.HeadTargetIndicator, 11, function(v)
+        State.Features.HeadTargetIndicator = v
+    end, "HeadTargetIndicator", "HeadTarget")
+    CreateToggle(page, "Radar", State.Features.Radar, 12, function(v)
+        State.Features.Radar = v
+        if RadarUpdate then RadarUpdate() end
+    end, "Radar", "Accent")
+    CreateSlider(page, "Radar Range", 50, 1000, State.Sliders.RadarRange, 13, function(v)
+        State.Sliders.RadarRange = v
+        if RadarUpdate then RadarUpdate() end
     end)
 end
 
@@ -4225,7 +4454,7 @@ pcall(RefreshToolViewer)
 SavedConfigs, ConfigStore = {}, {
     Root = "BravoHack",
     Configs = "BravoHack/Configs",
-    Version = "v1.0.6",
+    Version = "v1.0.8",
     KeyFile = "BravoHack/key.json",
     MetaFile = "BravoHack/settings.json",
 }
@@ -5222,6 +5451,8 @@ RunService.Heartbeat:Connect(function(dt)
     end
     if not Camera then return end
 
+    if State.UpdateRadar then State.UpdateRadar() end
+
     if State.Features.ShowFOV then
         local vp = Camera.ViewportSize
         local fov = State.Sliders.AimFOV
@@ -5322,7 +5553,26 @@ RunService.Heartbeat:Connect(function(dt)
                         local sh, headOnScreen = Camera:WorldToViewportPoint(headPart.Position + Vector3.new(0, 0.15, 0))
                         if headOnScreen then
                             objs.SkeletonHead.Position = UDim2.fromOffset(sh.X, sh.Y)
-                            objs.SkeletonHead.BackgroundColor3 = protected and CONFIG.Colors.ProtectedESP or CONFIG.Colors.Skeleton
+
+                            local mousePos = UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
+                            local headScreen = Vector2.new(sh.X, sh.Y)
+                            local cursorDistance = (headScreen - mousePos).Magnitude
+                            local headAligned = State.Features.HeadTargetIndicator and cursorDistance <= 14
+
+                            if headAligned then
+                                objs.SkeletonHead.Size = UDim2.fromOffset(15, 15)
+                                objs.SkeletonHead.BackgroundColor3 = CONFIG.Colors.HeadTarget
+                            else
+                                objs.SkeletonHead.Size = UDim2.fromOffset(10, 10)
+                                if protected then
+                                    objs.SkeletonHead.BackgroundColor3 = CONFIG.Colors.ProtectedESP
+                                elseif State.Features.SkeletonVisibilityCheck then
+                                    objs.SkeletonHead.BackgroundColor3 = AimTargetVisible(headPart, true) and CONFIG.Colors.SkeletonVisible or CONFIG.Colors.SkeletonHidden
+                                else
+                                    objs.SkeletonHead.BackgroundColor3 = CONFIG.Colors.Skeleton
+                                end
+                            end
+
                             objs.SkeletonHead.Visible = true
                         else
                             objs.SkeletonHead.Visible = false
@@ -5349,7 +5599,16 @@ RunService.Heartbeat:Connect(function(dt)
                             if length > 1 then
                                 local midX, midY = (sa.X + sb.X) * 0.5, (sa.Y + sb.Y) * 0.5
                                 local rotation = math.deg(math.atan2(-dx, dy))
-                                frame.BackgroundColor3 = protected and CONFIG.Colors.ProtectedESP or CONFIG.Colors.Skeleton
+                                if protected then
+                                    frame.BackgroundColor3 = CONFIG.Colors.ProtectedESP
+                                elseif State.Features.SkeletonVisibilityCheck then
+                                    frame.BackgroundColor3 = AimTargetVisible(b, true) and CONFIG.Colors.SkeletonVisible or CONFIG.Colors.SkeletonHidden
+                                else
+                                    frame.BackgroundColor3 = CONFIG.Colors.Skeleton
+                                end
+                                if glow then
+                                    glow.BackgroundColor3 = frame.BackgroundColor3
+                                end
                                 frame.Size = UDim2.fromOffset(2, length)
                                 frame.Position = UDim2.fromOffset(midX, midY)
                                 frame.Rotation = rotation
@@ -5381,7 +5640,13 @@ RunService.Heartbeat:Connect(function(dt)
                         local sj, onScreen = Camera:WorldToViewportPoint(part.Position)
                         if onScreen and sj.Z > 0 then
                             dot.Position = UDim2.fromOffset(sj.X, sj.Y)
-                            dot.BackgroundColor3 = protected and CONFIG.Colors.ProtectedESP or CONFIG.Colors.Skeleton
+                            if protected then
+                                dot.BackgroundColor3 = CONFIG.Colors.ProtectedESP
+                            elseif State.Features.SkeletonVisibilityCheck then
+                                dot.BackgroundColor3 = AimTargetVisible(part, true) and CONFIG.Colors.SkeletonVisible or CONFIG.Colors.SkeletonHidden
+                            else
+                                dot.BackgroundColor3 = CONFIG.Colors.Skeleton
+                            end
                             dot.Visible = true
                         else
                             dot.Visible = false
