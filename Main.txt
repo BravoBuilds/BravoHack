@@ -563,7 +563,7 @@ UI.ProfileName.Parent = UI.StatusBar
 
 UI.StatusLabel = UI.ProfileName
 
-KeyGate.ApiURL = "https://bravohack.tmneijsel.workers.dev/api/key"
+KeyGate.ApiURL = "https://bravohack.tmneijsel.workers.dev"
 
 local function LoadPersistentSettings()
     if type(isfile) ~= "function" or type(readfile) ~= "function" then return end
