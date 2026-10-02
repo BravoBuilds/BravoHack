@@ -1,4 +1,4 @@
--- BravoHack v1.1.0
+-- BravoHack v1.2.0
 -- External API key binding by immutable Roblox UserId with one-time key claiming.
 
 local Players           = game:GetService("Players")
@@ -162,6 +162,7 @@ local State = {
         Gravity = 196.2,
         UIScale = 1,
         RadarRange = 300,
+        RadarSize = 85,
         SkeletonThickness = 2,
         SkeletonGlowThickness = 6,
         SkeletonJointSize = 6,
@@ -391,15 +392,15 @@ UI.MainFrame.Name = "MainFrame"
 UI.MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 UI.MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 UI.MainFrame.Size = CONFIG.Sizes.Window
-UI.MainFrame.BackgroundColor3 = Color3.fromRGB(16, 18, 23)
+UI.MainFrame.BackgroundColor3 = Color3.fromRGB(11, 13, 17)
 UI.MainFrame.BackgroundTransparency = 0.05
 UI.MainFrame.BorderSizePixel = 0
 UI.MainFrame.ClipsDescendants = true
 UI.MainFrame.Visible = false
 UI.MainFrame.Parent = UI.ScreenGui
 State.MenuOpen = false
-NewCorner(5, UI.MainFrame)
-NewStroke(UI.MainFrame, CONFIG.Colors.Stroke, 1, 0.2)
+NewCorner(12, UI.MainFrame)
+NewStroke(UI.MainFrame, CONFIG.Colors.Stroke, 1, 0.05)
 
 UI.UIScaleInst = Instance.new("UIScale")
 UI.UIScaleInst.Scale = 1
@@ -408,7 +409,7 @@ UI.UIScaleInst.Parent = UI.MainFrame
 UI.TopBar = Instance.new("Frame")
 UI.TopBar.Name = "TopBar"
 UI.TopBar.Size = UDim2.new(1, 0, 0, CONFIG.Sizes.TopBar)
-UI.TopBar.BackgroundColor3 = Color3.fromRGB(17, 18, 22)
+UI.TopBar.BackgroundColor3 = Color3.fromRGB(14, 17, 22)
 UI.TopBar.BorderSizePixel = 0
 UI.TopBar.Parent = UI.MainFrame
 NewCorner(5, UI.TopBar)
@@ -425,10 +426,10 @@ UI.Title.BackgroundTransparency = 1
 UI.Title.Position = UDim2.new(0, 30, 0, 0)
 UI.Title.Size = UDim2.new(1, -170, 1, 0)
 UI.Title.Font = Enum.Font.GothamBold
-UI.Title.TextSize = 18
+UI.Title.TextSize = 20
 UI.Title.TextColor3 = CONFIG.Colors.Text
 UI.Title.TextXAlignment = Enum.TextXAlignment.Left
-UI.Title.Text = "BravoHack"
+UI.Title.Text = "BRAVOHACK"
 UI.Title.Parent = UI.TopBar
 
 UI.VersionLabel = Instance.new("TextLabel")
@@ -441,17 +442,17 @@ UI.VersionLabel.Font = Enum.Font.Gotham
 UI.VersionLabel.TextSize = 12
 UI.VersionLabel.TextColor3 = CONFIG.Colors.SubText
 UI.VersionLabel.TextXAlignment = Enum.TextXAlignment.Right
-UI.VersionLabel.Text = "v1.1.0"
+UI.VersionLabel.Text = "v1.2.0"
 UI.VersionLabel.Parent = UI.TopBar
 
 
 UI.CloseButton = Instance.new("TextButton")
-UI.CloseButton.Size = UDim2.fromOffset(28, 28)
-UI.CloseButton.Position = UDim2.new(1, -36, 0.5, -14)
+UI.CloseButton.Size = UDim2.fromOffset(58, 28)
+UI.CloseButton.Position = UDim2.new(1, -68, 0.5, -14)
 UI.CloseButton.BackgroundColor3 = Color3.fromRGB(28, 28, 31)
-UI.CloseButton.Text = "✕"
-UI.CloseButton.Font = Enum.Font.GothamBold
-UI.CloseButton.TextSize = 13
+UI.CloseButton.Text = "CLOSE"
+UI.CloseButton.Font = Enum.Font.GothamMedium
+UI.CloseButton.TextSize = 9
 UI.CloseButton.TextColor3 = CONFIG.Colors.SubText
 UI.CloseButton.AutoButtonColor = false
 UI.CloseButton.Parent = UI.TopBar
@@ -2978,15 +2979,27 @@ do
     radarFrame.ZIndex = 80
     radarFrame.Parent = UI.Overlay
 
-    local centerDot = Instance.new("Frame")
-    centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
-    centerDot.Position = UDim2.fromScale(0.5, 0.5)
-    centerDot.Size = UDim2.fromOffset(3, 3)
-    centerDot.BackgroundColor3 = CONFIG.Colors.Text
-    centerDot.BorderSizePixel = 0
-    centerDot.ZIndex = 81
-    centerDot.Parent = radarFrame
-    NewCorner(99, centerDot)
+    local radarRing = Instance.new("Frame")
+    radarRing.Name = "RadarRing"
+    radarRing.AnchorPoint = Vector2.new(0.5, 0.5)
+    radarRing.Position = UDim2.fromScale(0.5, 0.5)
+    radarRing.Size = UDim2.fromOffset(State.Sliders.RadarSize * 2, State.Sliders.RadarSize * 2)
+    radarRing.BackgroundTransparency = 1
+    radarRing.BorderSizePixel = 0
+    radarRing.ZIndex = 80
+    radarRing.Parent = radarFrame
+    NewCorner(9999, radarRing)
+    NewStroke(radarRing, CONFIG.Colors.Stroke, 2, 0.15)
+
+    local radarInner = Instance.new("Frame")
+    radarInner.AnchorPoint = Vector2.new(0.5, 0.5)
+    radarInner.Position = UDim2.fromScale(0.5, 0.5)
+    radarInner.Size = UDim2.fromOffset(6, 6)
+    radarInner.BackgroundColor3 = CONFIG.Colors.Accent
+    radarInner.BorderSizePixel = 0
+    radarInner.ZIndex = 82
+    radarInner.Parent = radarFrame
+    NewCorner(99, radarInner)
 
     local markers = {}
 
@@ -2997,19 +3010,19 @@ do
         end
 
         marker = Instance.new("TextLabel")
-        marker.Name = "DirectionArrow"
+        marker.Name = "DirectionTriangle"
         marker.AnchorPoint = Vector2.new(0.5, 0.5)
-        marker.Size = UDim2.fromOffset(20, 20)
+        marker.Size = UDim2.fromOffset(18, 18)
         marker.BackgroundTransparency = 1
         marker.Font = Enum.Font.GothamBold
         marker.TextSize = 18
         marker.Text = "▲"
-        marker.TextStrokeTransparency = 0.15
+        marker.TextStrokeTransparency = 0.05
         marker.TextColor3 = CONFIG.Colors.Accent
         marker.TextXAlignment = Enum.TextXAlignment.Center
         marker.TextYAlignment = Enum.TextYAlignment.Center
-        marker.ZIndex = 82
-        marker.Parent = UI.Overlay
+        marker.ZIndex = 83
+        marker.Parent = radarFrame
         markers[plr] = marker
         return marker
     end
@@ -3022,6 +3035,7 @@ do
 
     RadarUpdate = function()
         radarFrame.Visible = State.Features.Radar
+        radarRing.Size = UDim2.fromOffset(State.Sliders.RadarSize * 2, State.Sliders.RadarSize * 2)
 
         if not State.Features.Radar or not Camera then
             for _, marker in pairs(markers) do
@@ -3042,8 +3056,8 @@ do
         forward = forward.Unit
         right = right.Unit
 
+        local radius = math.max(25, State.Sliders.RadarSize)
         local active = {}
-        local maxOffset = 52
 
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer then
@@ -3055,24 +3069,21 @@ do
                     local flat = Vector3.new(root.Position.X - camPos.X, 0, root.Position.Z - camPos.Z)
                     local distance = flat.Magnitude
 
-                    if distance <= math.max(1, State.Sliders.RadarRange) then
+                    if distance <= math.max(1, State.Sliders.RadarRange) and distance > 0.01 then
                         local rightAmount = right:Dot(flat)
                         local forwardAmount = forward:Dot(flat)
-                        local x = rightAmount
-                        local y = -forwardAmount
-                        local magnitude = math.sqrt(x * x + y * y)
 
-                        if magnitude > maxOffset then
-                            local scale = maxOffset / magnitude
-                            x *= scale
-                            y *= scale
-                        end
+                        -- Every target sits on the fixed radar circumference.
+                        -- Only the triangle rotation changes with the target direction.
+                        local angle = math.atan2(rightAmount, forwardAmount)
+                        local x = math.sin(angle) * radius
+                        local y = -math.cos(angle) * radius
 
                         local marker = getMarker(plr)
                         marker.Visible = true
-                        marker.Position = UDim2.fromOffset(Camera.ViewportSize.X * 0.5 + x, Camera.ViewportSize.Y * 0.5 + y)
+                        marker.Position = UDim2.fromOffset(x, y)
                         marker.TextColor3 = getRadarColor(distance)
-                        marker.Rotation = math.deg(math.atan2(x, -y))
+                        marker.Rotation = math.deg(angle)
                         active[plr] = true
                     end
                 end
@@ -3709,6 +3720,10 @@ do
     end, "Radar", "Accent")
     CreateSlider(page, "Radar Range", 50, 1000, State.Sliders.RadarRange, 25, function(v)
         State.Sliders.RadarRange = v
+        if RadarUpdate then RadarUpdate() end
+    end)
+    CreateSlider(page, "Radar Circle Size", 45, 180, State.Sliders.RadarSize, 26, function(v)
+        State.Sliders.RadarSize = v
         if RadarUpdate then RadarUpdate() end
     end)
 end
