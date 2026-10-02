@@ -1,11 +1,11 @@
-# BravoHack
+# BravoHack — Cheat Menu
 
-> **Advanced Roblox client-side utility / development menu**  
-> Current release: **v1.0.6**
+> **Roblox cheat menu / client-side executor UI**  
+> Current release: **v1.0.7**
 
 ![BravoHack overview](assets/overview.svg)
 
-BravoHack is a modular Roblox Lua menu designed for an executor/client-side environment. The project combines visual tools, combat utilities, movement controls, player/world utilities, persistent configuration, a key gate, and a GitHub-backed Lua module system in one interface.
+BravoHack is a modular Roblox Lua cheat menu designed for an executor/client-side environment. The project combines visual tools, combat utilities, movement controls, player/world utilities, persistent configuration, a key gate, and a GitHub-backed Lua module system in one interface.
 
 > **Project note:** BravoHack is intended for use in your own Roblox experience, private testing, or environments where you are authorized to run client-side scripts. Some features depend on the capabilities of the executor being used.
 
@@ -54,7 +54,7 @@ BravoHack is a modular Roblox Lua menu designed for an executor/client-side envi
 
 ## Interface
 
-BravoHack uses a horizontal tab layout so the main categories remain accessible without a large permanent sidebar.
+BravoHack uses a dark, rounded-window cheat-menu layout with a compact top navigation bar. The v1.0.7 UI refresh follows the supplied reference: large centered menu, clean header, subtle borders, tab navigation, roomy feature cards, and compact status information.
 
 ![BravoHack interface](assets/overview.svg)
 
@@ -476,11 +476,11 @@ Silent Aim is especially executor-dependent because its implementation uses meta
 
 ---
 
-# Development
+# Cheat Menu Architecture
 
-The project is intentionally modular.
+The project is intentionally modular and keeps the core cheat menu in `Main.txt` while allowing extra Lua modules in `Lua's/`.
 
-For small extensions, prefer adding a standalone module under:
+For small cheat-menu extensions, prefer adding a standalone module under:
 
 ```text
 Lua's/
@@ -502,19 +502,21 @@ Current header:
 
 The repository includes three lightweight SVG documentation visuals:
 
-- `assets/overview.svg` — main interface overview
-- `assets/lua-runner.svg` — GitHub Lua module workflow
-- `assets/inventory-view.svg` — Inventory View module
+- `assets/overview.svg` — main cheat-menu layout reference
+- `assets/lua-runner.svg` — GitHub Lua module workflow reference
+- `assets/inventory-view.svg` — Inventory View module reference
 
-These are documentation mockups rather than captured Roblox screenshots, so they remain portable and version-controlled with the project.
+These files are portable, version-controlled visual references for the menu and module windows.
 
 ---
 
 # Version
 
-**v1.0.6**
+**v1.0.7**
 
 Latest documented changes include:
+
+- Reference-inspired cheat-menu UI refresh
 
 - Expanded Aimbot FOV
 - Camera-center targeting
@@ -539,4 +541,4 @@ Repository:
 
 https://github.com/BravoBuilds/BravoHack
 
-Built as a modular Roblox Lua project with a focus on configurable client-side tooling and extensibility.
+Built as a modular Roblox Lua cheat menu with configurable client-side features and extensibility.
