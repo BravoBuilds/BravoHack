@@ -1,4 +1,5 @@
 const KEYS_URL = "https://raw.githubusercontent.com/BravoBuilds/BravoHack/main/Keys.txt";
+const KEY_DURATION_MS = 24 * 60 * 60 * 1000;
 
 const json = (data, status = 200) => new Response(JSON.stringify(data), {
   status,
@@ -14,6 +15,12 @@ async function ensureSchema(db) {
   const columns = await db.prepare("PRAGMA table_info(key_claims)").all();
   const hasExpires = (columns.results || []).some(column => column.name === "expires_at");
   if (!hasExpires) await db.exec("ALTER TABLE key_claims ADD COLUMN expires_at TEXT");
+
+  // All keys are now 24-hour keys. Convert older permanent claims to a
+  // 24-hour expiry based on their original claim time.
+  await db.exec(`UPDATE key_claims
+    SET expires_at = datetime(claimed_at, '+24 hours')
+    WHERE expires_at IS NULL`);
 }
 
 function parseDuration(value) {
@@ -70,7 +77,7 @@ async function handlePost(request, env) {
   }
 
   const claimedAt = new Date().toISOString();
-  const expiresAt = keyInfo.duration ? new Date(Date.now() + keyInfo.duration).toISOString() : null;
+  const expiresAt = new Date(Date.now() + KEY_DURATION_MS).toISOString();
 
   // The primary key makes the first claim win atomically.
   await env.DB.prepare("INSERT OR IGNORE INTO key_claims (key, user_id, claimed_at, expires_at) VALUES (?, ?, ?, ?)")
@@ -90,6 +97,35 @@ async function handlePost(request, env) {
   return json({ ok:true, claimed:!existing, key, userId, claimedAt:row.claimed_at, expiresAt:row.expires_at, permanent:!row.expires_at });
 }
 
+async function handleList(env) {
+  const response = await fetch(KEYS_URL, { headers: { "User-Agent": "BravoHack-KeyAPI/1.0" } });
+  if (!response.ok) return json({ ok:false, error:"KEY_SOURCE_UNAVAILABLE" }, 503);
+
+  const source = await response.text();
+  await ensureSchema(env.DB);
+
+  const rows = await env.DB.prepare("SELECT key, user_id, claimed_at, expires_at FROM key_claims").all();
+  const claims = new Map((rows.results || []).map(row => [String(row.key).toLowerCase(), row]));
+
+  const keys = [];
+  for (const line of source.split(/\r?\n/)) {
+    const parts = line.split("|").map(part => part.trim());
+    const key = parts[0];
+    if (!key) continue;
+
+    const row = claims.get(key.toLowerCase());
+    const expired = !!row?.expires_at && Date.parse(row.expires_at) <= Date.now();
+    keys.push({
+      key,
+      used: !!row,
+      expired,
+      expiresAt: row?.expires_at || null
+    });
+  }
+
+  return json({ ok:true, durationHours:24, keys });
+}
+
 async function handleGet(request, env) {
   const url = new URL(request.url);
   const key = (url.searchParams.get("key") || "").trim();
@@ -105,7 +141,7 @@ async function handleGet(request, env) {
 
   if (!row) return json({ ok:true, valid:true, used:false, userId:null, duration: keyInfo.duration ? true : false });
   const expired = !!row.expires_at && Date.parse(row.expires_at) <= Date.now();
-  return json({ ok:true, valid:!expired, used:true, expired, userId:String(row.user_id), claimedAt:row.claimed_at, expiresAt:row.expires_at, permanent:!row.expires_at });
+  return json({ ok:true, valid:!expired, used:true, expired, userId:String(row.user_id), claimedAt:row.claimed_at, expiresAt:row.expires_at, permanent:false, durationHours:24 });
 }
 
 export default {
@@ -123,6 +159,7 @@ export default {
       const url = new URL(request.url);
       if (url.pathname === "/api/key" && request.method === "POST") return await handlePost(request, env);
       if (url.pathname === "/api/key" && request.method === "GET") return await handleGet(request, env);
+      if (url.pathname === "/api/keys" && request.method === "GET") return await handleList(env);
       return json({ ok:true, service:"BravoHack Key API", endpoint:"/api/key" });
     } catch {
       return json({ ok:false, error:"INTERNAL_ERROR", message:"Key API is temporarily unavailable." }, 500);
