@@ -564,7 +564,7 @@ UI.ProfileName.Parent = UI.StatusBar
 
 UI.StatusLabel = UI.ProfileName
 
-KeyGate.ApiURL = "https://bravohack.tmneijsel.workers.dev/"
+KeyGate.ApiURL = "https://bravohack.tmneijsel.workers.dev"
 
 local function LoadPersistentSettings()
     if type(isfile) ~= "function" or type(readfile) ~= "function" then return end
@@ -666,7 +666,7 @@ local function AuthorizeKeyWithAPI(key)
     end
 
     local statusCode = tonumber(response.StatusCode or response.Status or 0) or 0
-    local responseBody = response.Body
+    local responseBody = response.Body or response.body
     if type(responseBody) ~= "string" or responseBody == "" then
         return false, statusCode >= 500 and "Key API is temporarily unavailable." or "Key API returned an empty response."
     end
