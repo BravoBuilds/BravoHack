@@ -1,5 +1,5 @@
--- BravoHack v1.0.8
--- Stable visual diagnostics: skeleton visibility colors, crosshair head highlight, and radar.
+-- BravoHack v1.0.9
+-- Server-authoritative key binding by immutable Roblox UserId with one-time key claiming.
 
 local Players           = game:GetService("Players")
 local RunService         = game:GetService("RunService")
@@ -288,7 +288,7 @@ KeyGate.Subtitle.Font = Enum.Font.Gotham
 KeyGate.Subtitle.TextSize = 14
 KeyGate.Subtitle.TextColor3 = CONFIG.Colors.SubText
 KeyGate.Subtitle.TextWrapped = true
-KeyGate.Subtitle.Text = "Enter your access key to unlock the menu. Access is remembered for this session."
+KeyGate.Subtitle.Text = "Enter an access key. Each key is permanently bound to one Roblox UserId after first use."
 KeyGate.Subtitle.ZIndex = 101
 KeyGate.Subtitle.Parent = KeyGate.Frame
 
@@ -369,7 +369,7 @@ KeyGate.Status.Size = UDim2.new(1, -40, 0, 36)
 KeyGate.Status.Font = Enum.Font.Gotham
 KeyGate.Status.TextSize = 11
 KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
-KeyGate.Status.Text = "Enter your access key."
+KeyGate.Status.Text = "Bound UserId: " .. tostring(LocalPlayer.UserId) .. "  |  Waiting for a key..."
 KeyGate.Status.ZIndex = 101
 KeyGate.Status.Parent = KeyGate.Frame
 
@@ -555,7 +555,7 @@ UI.ProfileName.Parent = UI.StatusBar
 UI.StatusLabel = UI.ProfileName
 
 KeyGate.SourceURL = "https://raw.githubusercontent.com/BravoBuilds/BravoHack/refs/heads/main/Keys.txt"
-KeyGate.ValidKeys = { BRAVOONTOP = true }
+KeyGate.ValidKeys = {}
 KeyGate.KeysLoaded = false
 
 local function LoadPersistentSettings()
@@ -659,9 +659,35 @@ local function LoadKeysFromURL()
         end
     end
 
-    KeyGate.ValidKeys = { BRAVOONTOP = true }
+    KeyGate.ValidKeys = {}
     KeyGate.KeysLoaded = false
     return false
+end
+
+function AuthorizeKeyWithServer(key)
+    local replicatedStorage = game:GetService("ReplicatedStorage")
+    local remote = replicatedStorage:FindFirstChild("BravoHackKeyAuth")
+
+    if not remote then
+        local ok, waited = pcall(function()
+            return replicatedStorage:WaitForChild("BravoHackKeyAuth", 8)
+        end)
+        if ok then remote = waited end
+    end
+
+    if not remote or not remote:IsA("RemoteFunction") then
+        return false, "Key server is not installed."
+    end
+
+    local ok, allowed, message = pcall(function()
+        return remote:InvokeServer(key)
+    end)
+
+    if not ok then
+        return false, "Key server connection failed."
+    end
+
+    return allowed == true, tostring(message or (allowed and "Access granted." or "Access denied."))
 end
 
 local function OpenAuthorizedMenu()
@@ -715,28 +741,19 @@ SubmitKey = function()
     end
 
     KeyGate.InteractionBusy = true
-    KeyGate.Status.Text = "Checking key..."
+    KeyGate.Status.Text = "Binding key to this Roblox UserId..."
     KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
 
-    local loaded = KeyGate.KeysLoaded
-    if not loaded then
-        loaded = pcall(function() LoadKeysFromURL() end) and KeyGate.KeysLoaded
-    end
-
-    local valid = KeyGate.ValidKeys[key] == true
+    local valid, message = AuthorizeKeyWithServer(key)
     KeyGate.InteractionBusy = false
 
     if not valid then
-        if not loaded then
-            KeyGate.Status.Text = "Could not load the key list."
-        else
-            KeyGate.Status.Text = "Invalid key."
-        end
+        KeyGate.Status.Text = message or "Invalid, used, or unavailable key."
         KeyGate.Status.TextColor3 = CONFIG.Colors.Red
         return
     end
 
-    KeyGate.Status.Text = "Access granted."
+    KeyGate.Status.Text = "Access granted. Key bound to UserId " .. tostring(LocalPlayer.UserId) .. "."
     KeyGate.Status.TextColor3 = CONFIG.Colors.Green
     KeyGate.Button.Text = "Unlocked"
     if State.Features.AutoRememberKey and ConfigStore and ConfigStore.SaveRememberedKey then
@@ -793,7 +810,7 @@ local function CopyKeyLink()
     if not copied then tryClipboard(writeclipboard) end
 
     if copied then
-        KeyGate.Status.Text = "Key link copied to clipboard."
+        KeyGate.Status.Text = "Key list link copied. Keys are server-bound after first use."
         KeyGate.Status.TextColor3 = CONFIG.Colors.Green
     else
         KeyGate.Status.Text = "Clipboard is unavailable in this environment."
@@ -837,16 +854,19 @@ end
 ConnectOnce(KeyGate.UninjectButton, UninjectFromKeyGate)
 
 task.spawn(function()
-    local loaded = LoadKeysFromURL()
-    if loaded and State.Features.AutoRememberKey then
+    if State.Features.AutoRememberKey then
         local remembered = LoadRememberedKey()
         if remembered then
-            if KeyGate.ValidKeys[remembered] == true then
+            local valid, message = AuthorizeKeyWithServer(remembered)
+            if valid then
                 KeyGate.Input.Text = remembered
-                KeyGate.Status.Text = "Remembered key accepted."
+                KeyGate.Status.Text = "Remembered key accepted for UserId " .. tostring(LocalPlayer.UserId) .. "."
+                KeyGate.Status.TextColor3 = CONFIG.Colors.Green
                 OpenAuthorizedMenu()
             else
                 ClearRememberedKeyFile()
+                KeyGate.Status.Text = message or "Remembered key is no longer valid for this UserId."
+                KeyGate.Status.TextColor3 = CONFIG.Colors.Red
             end
         end
     end
