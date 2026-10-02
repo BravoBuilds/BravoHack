@@ -1,4 +1,4 @@
--- BravoHack v1.0.9
+-- BravoHack v1.1.0
 -- External API key binding by immutable Roblox UserId with one-time key claiming.
 
 local Players           = game:GetService("Players")
@@ -135,6 +135,9 @@ local State = {
         TeamCheck = false,
         WallCheck = false,
         SkeletonVisibilityCheck = true,
+        SkeletonJoints = true,
+        SkeletonGlow = true,
+        SkeletonHeadMarker = true,
         HeadTargetIndicator = true,
         Radar = false,
     },
@@ -159,6 +162,11 @@ local State = {
         Gravity = 196.2,
         UIScale = 1,
         RadarRange = 300,
+        SkeletonThickness = 2,
+        SkeletonGlowThickness = 6,
+        SkeletonJointSize = 6,
+        SkeletonHeadSize = 10,
+        SkeletonHeadTargetSize = 15,
     },
     Connections = {},
     ESPObjects = {},
@@ -433,7 +441,7 @@ UI.VersionLabel.Font = Enum.Font.Gotham
 UI.VersionLabel.TextSize = 12
 UI.VersionLabel.TextColor3 = CONFIG.Colors.SubText
 UI.VersionLabel.TextXAlignment = Enum.TextXAlignment.Right
-UI.VersionLabel.Text = "v1.0.9"
+UI.VersionLabel.Text = "v1.1.0"
 UI.VersionLabel.Parent = UI.TopBar
 
 
@@ -1805,7 +1813,7 @@ local function CreateSkeletonForCharacter(char)
             local dot = Instance.new("Frame")
             dot.Name = "DeveloperSkeletonJoint"
             dot.AnchorPoint = Vector2.new(0.5, 0.5)
-            dot.Size = UDim2.fromOffset(6, 6)
+            dot.Size = UDim2.fromOffset(math.max(2, State.Sliders.SkeletonJointSize), math.max(2, State.Sliders.SkeletonJointSize))
             dot.BackgroundColor3 = CONFIG.Colors.Skeleton
             dot.BorderSizePixel = 0
             dot.Visible = false
@@ -2960,95 +2968,25 @@ end
 
 do
     local radarFrame = Instance.new("Frame")
-    radarFrame.Name = "BravoHackRadar"
-    radarFrame.AnchorPoint = Vector2.new(1, 1)
-    radarFrame.Position = UDim2.new(1, -18, 1, -44)
-    radarFrame.Size = UDim2.fromOffset(210, 210)
-    radarFrame.BackgroundColor3 = Color3.fromRGB(12, 14, 18)
-    radarFrame.BackgroundTransparency = 0.06
+    radarFrame.Name = "BravoHackCenterRadar"
+    radarFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    radarFrame.Position = UDim2.fromScale(0.5, 0.5)
+    radarFrame.Size = UDim2.fromOffset(2, 2)
+    radarFrame.BackgroundTransparency = 1
     radarFrame.BorderSizePixel = 0
     radarFrame.Visible = State.Features.Radar
-    radarFrame.ZIndex = 40
+    radarFrame.ZIndex = 80
     radarFrame.Parent = UI.Overlay
-    NewCorner(16, radarFrame)
-    NewStroke(radarFrame, CONFIG.Colors.Stroke, 1, 0.2)
 
-    local title = Instance.new("TextLabel")
-    title.BackgroundTransparency = 1
-    title.Position = UDim2.fromOffset(14, 8)
-    title.Size = UDim2.new(1, -28, 0, 18)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 11
-    title.TextColor3 = CONFIG.Colors.Text
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Text = "RADAR"
-    title.ZIndex = 41
-    title.Parent = radarFrame
-
-    local rangeLabel = Instance.new("TextLabel")
-    rangeLabel.BackgroundTransparency = 1
-    rangeLabel.AnchorPoint = Vector2.new(1, 0)
-    rangeLabel.Position = UDim2.new(1, -14, 0, 8)
-    rangeLabel.Size = UDim2.fromOffset(80, 18)
-    rangeLabel.Font = Enum.Font.Gotham
-    rangeLabel.TextSize = 10
-    rangeLabel.TextColor3 = CONFIG.Colors.SubText
-    rangeLabel.TextXAlignment = Enum.TextXAlignment.Right
-    rangeLabel.Text = tostring(State.Sliders.RadarRange) .. " studs"
-    rangeLabel.ZIndex = 41
-    rangeLabel.Parent = radarFrame
-
-    local circle = Instance.new("Frame")
-    circle.AnchorPoint = Vector2.new(0.5, 0.5)
-    circle.Position = UDim2.new(0.5, 0, 0.55, 0)
-    circle.Size = UDim2.fromOffset(158, 158)
-    circle.BackgroundTransparency = 1
-    circle.BorderSizePixel = 0
-    circle.ZIndex = 41
-    circle.Parent = radarFrame
-    NewCorner(9999, circle)
-    NewStroke(circle, CONFIG.Colors.Stroke, 1, 0.22)
-
-    local innerRing = Instance.new("Frame")
-    innerRing.AnchorPoint = Vector2.new(0.5, 0.5)
-    innerRing.Position = UDim2.fromScale(0.5, 0.5)
-    innerRing.Size = UDim2.fromOffset(76, 76)
-    innerRing.BackgroundTransparency = 1
-    innerRing.BorderSizePixel = 0
-    innerRing.ZIndex = 41
-    innerRing.Parent = circle
-    NewCorner(9999, innerRing)
-    NewStroke(innerRing, CONFIG.Colors.Stroke, 1, 0.45)
-
-    local vertical = Instance.new("Frame")
-    vertical.AnchorPoint = Vector2.new(0.5, 0.5)
-    vertical.Position = UDim2.fromScale(0.5, 0.5)
-    vertical.Size = UDim2.new(0, 1, 1, 0)
-    vertical.BackgroundColor3 = CONFIG.Colors.Stroke
-    vertical.BackgroundTransparency = 0.62
-    vertical.BorderSizePixel = 0
-    vertical.ZIndex = 41
-    vertical.Parent = circle
-
-    local horizontal = Instance.new("Frame")
-    horizontal.AnchorPoint = Vector2.new(0.5, 0.5)
-    horizontal.Position = UDim2.fromScale(0.5, 0.5)
-    horizontal.Size = UDim2.new(1, 0, 0, 1)
-    horizontal.BackgroundColor3 = CONFIG.Colors.Stroke
-    horizontal.BackgroundTransparency = 0.62
-    horizontal.BorderSizePixel = 0
-    horizontal.ZIndex = 41
-    horizontal.Parent = circle
-
-    local center = Instance.new("Frame")
-    center.AnchorPoint = Vector2.new(0.5, 0.5)
-    center.Position = UDim2.fromScale(0.5, 0.5)
-    center.Size = UDim2.fromOffset(7, 7)
-    center.BackgroundColor3 = CONFIG.Colors.Text
-    center.BorderSizePixel = 0
-    center.ZIndex = 44
-    center.Parent = circle
-    NewCorner(99, center)
+    local centerDot = Instance.new("Frame")
+    centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
+    centerDot.Position = UDim2.fromScale(0.5, 0.5)
+    centerDot.Size = UDim2.fromOffset(3, 3)
+    centerDot.BackgroundColor3 = CONFIG.Colors.Text
+    centerDot.BorderSizePixel = 0
+    centerDot.ZIndex = 81
+    centerDot.Parent = radarFrame
+    NewCorner(99, centerDot)
 
     local markers = {}
 
@@ -3059,18 +2997,19 @@ do
         end
 
         marker = Instance.new("TextLabel")
-        marker.Name = "Player"
+        marker.Name = "DirectionArrow"
         marker.AnchorPoint = Vector2.new(0.5, 0.5)
         marker.Size = UDim2.fromOffset(20, 20)
         marker.BackgroundTransparency = 1
         marker.Font = Enum.Font.GothamBold
-        marker.TextSize = 17
+        marker.TextSize = 18
         marker.Text = "▲"
-        marker.TextStrokeTransparency = 0.2
+        marker.TextStrokeTransparency = 0.15
+        marker.TextColor3 = CONFIG.Colors.Accent
         marker.TextXAlignment = Enum.TextXAlignment.Center
         marker.TextYAlignment = Enum.TextYAlignment.Center
-        marker.ZIndex = 44
-        marker.Parent = circle
+        marker.ZIndex = 82
+        marker.Parent = UI.Overlay
         markers[plr] = marker
         return marker
     end
@@ -3083,7 +3022,6 @@ do
 
     RadarUpdate = function()
         radarFrame.Visible = State.Features.Radar
-        rangeLabel.Text = tostring(math.floor(State.Sliders.RadarRange + 0.5)) .. " studs"
 
         if not State.Features.Radar or not Camera then
             for _, marker in pairs(markers) do
@@ -3104,9 +3042,8 @@ do
         forward = forward.Unit
         right = right.Unit
 
-        local radarCenter = Vector2.new(79, 83)
-        local radius = 69
         local active = {}
+        local maxOffset = 52
 
         for _, plr in ipairs(Players:GetPlayers()) do
             if plr ~= LocalPlayer then
@@ -3121,20 +3058,19 @@ do
                     if distance <= math.max(1, State.Sliders.RadarRange) then
                         local rightAmount = right:Dot(flat)
                         local forwardAmount = forward:Dot(flat)
-
                         local x = rightAmount
                         local y = -forwardAmount
                         local magnitude = math.sqrt(x * x + y * y)
 
-                        if magnitude > radius then
-                            local scale = radius / magnitude
+                        if magnitude > maxOffset then
+                            local scale = maxOffset / magnitude
                             x *= scale
                             y *= scale
                         end
 
                         local marker = getMarker(plr)
                         marker.Visible = true
-                        marker.Position = UDim2.fromOffset(radarCenter.X + x, radarCenter.Y + y)
+                        marker.Position = UDim2.fromOffset(Camera.ViewportSize.X * 0.5 + x, Camera.ViewportSize.Y * 0.5 + y)
                         marker.TextColor3 = getRadarColor(distance)
                         marker.Rotation = math.deg(math.atan2(x, -y))
                         active[plr] = true
@@ -3675,8 +3611,9 @@ end)
 
 do
     local page = Pages.Visuals
+
     CreateSectionLabel(page, "ESP", 1)
-    CreateToggle(page, "Player ESP (name + distance + HP)", false, 2, function(v)
+    CreateToggle(page, "Player ESP", false, 2, function(v)
         State.Features.ESP = v
         RefreshTracking()
         for _, objs in pairs(State.ESPObjects) do
@@ -3684,29 +3621,7 @@ do
             if objs.Billboard then objs.Billboard.Enabled = v end
         end
     end, "ESP", "ESPFill")
-    CreateToggle(page, "Box ESP", false, 3, function(v)
-        State.Features.BoxESP = v
-        RefreshTracking()
-    end, "BoxESP", "BoxESP")
-    CreateToggle(page, "Healthbar", false, 4, function(v)
-        State.Features.Healthbar = v
-        RefreshTracking()
-    end, "Healthbar", "HealthGood")
-    CreateToggle(page, "Skeleton ESP (R6 + R15)", false, 5, function(v)
-        State.Features.SkeletonESP = v
-        RefreshTracking()
-        for plr, objs in pairs(State.ESPObjects) do
-            if v then
-                RebuildSkeleton(plr)
-            else
-                if objs.SkeletonHead then objs.SkeletonHead.Visible = false end
-                for _, segment in ipairs(objs.SkeletonSegments or {}) do
-                    if segment.Frame then segment.Frame.Visible = false end
-                end
-            end
-        end
-    end, "SkeletonESP", "Skeleton")
-    CreateToggle(page, "Chams (visible through walls)", false, 6, function(v)
+    CreateToggle(page, "Chams (visible through walls)", false, 3, function(v)
         State.Features.Chams = v
         RefreshTracking()
         for _, objs in pairs(State.ESPObjects) do
@@ -3717,28 +3632,82 @@ do
         end
         ApplyESPColors()
     end, "Chams", "ESPOutline")
-    CreateToggle(page, "Chams Team Color", false, 7, function(v)
+    CreateToggle(page, "Chams Team Color", false, 4, function(v)
         State.Features.ChamsTeamColor = v
         ApplyESPColors()
     end, "ChamsTeamColor")
-    CreateToggle(page, "Tracers (lines to players)", false, 8, function(v)
+    CreateToggle(page, "Tracers", false, 5, function(v)
         State.Features.Tracers = v
         RefreshTracking()
     end, "Tracers", "Tracer")
-    CreateSlider(page, "Max ESP distance", 50, 1000, State.Sliders.ESPDistance, 9, function(v)
+    CreateSlider(page, "Max ESP distance", 50, 1000, State.Sliders.ESPDistance, 6, function(v)
         State.Sliders.ESPDistance = v
     end)
-    CreateToggle(page, "Skeleton Visibility Check", State.Features.SkeletonVisibilityCheck, 10, function(v)
+
+    CreateSectionLabel(page, "Skeleton / Player Outline", 8)
+    CreateToggle(page, "Skeleton ESP (R6 + R15)", false, 9, function(v)
+        State.Features.SkeletonESP = v
+        RefreshTracking()
+        for plr, objs in pairs(State.ESPObjects) do
+            if v then
+                RebuildSkeleton(plr)
+            else
+                if objs.SkeletonHead then objs.SkeletonHead.Visible = false end
+                for _, segment in ipairs(objs.SkeletonSegments or {}) do
+                    if segment.Frame then segment.Frame.Visible = false end
+                    if segment.Glow then segment.Glow.Visible = false end
+                end
+                for _, joint in ipairs(objs.SkeletonJoints or {}) do
+                    if joint.Frame then joint.Frame.Visible = false end
+                end
+            end
+        end
+    end, "SkeletonESP", "Skeleton")
+    CreateToggle(page, "Skeleton Joints", State.Features.SkeletonJoints, 10, function(v)
+        State.Features.SkeletonJoints = v
+    end, "SkeletonJoints", "Skeleton")
+    CreateToggle(page, "Skeleton Glow", State.Features.SkeletonGlow, 11, function(v)
+        State.Features.SkeletonGlow = v
+    end, "SkeletonGlow", "Skeleton")
+    CreateToggle(page, "Skeleton Head Marker", State.Features.SkeletonHeadMarker, 12, function(v)
+        State.Features.SkeletonHeadMarker = v
+    end, "SkeletonHeadMarker", "HeadTarget")
+    CreateToggle(page, "Skeleton Visibility Check", State.Features.SkeletonVisibilityCheck, 13, function(v)
         State.Features.SkeletonVisibilityCheck = v
     end, "SkeletonVisibilityCheck", "SkeletonVisible")
-    CreateToggle(page, "Head Target Indicator", State.Features.HeadTargetIndicator, 11, function(v)
+    CreateToggle(page, "Box ESP", false, 14, function(v)
+        State.Features.BoxESP = v
+        RefreshTracking()
+    end, "BoxESP", "BoxESP")
+    CreateToggle(page, "Healthbar", false, 15, function(v)
+        State.Features.Healthbar = v
+        RefreshTracking()
+    end, "Healthbar", "HealthGood")
+    CreateToggle(page, "Head Target Indicator", State.Features.HeadTargetIndicator, 16, function(v)
         State.Features.HeadTargetIndicator = v
     end, "HeadTargetIndicator", "HeadTarget")
-    CreateToggle(page, "Radar", State.Features.Radar, 12, function(v)
+    CreateSlider(page, "Skeleton Line Thickness", 1, 6, State.Sliders.SkeletonThickness, 17, function(v)
+        State.Sliders.SkeletonThickness = v
+    end)
+    CreateSlider(page, "Skeleton Glow Thickness", 2, 12, State.Sliders.SkeletonGlowThickness, 18, function(v)
+        State.Sliders.SkeletonGlowThickness = v
+    end)
+    CreateSlider(page, "Skeleton Joint Size", 2, 14, State.Sliders.SkeletonJointSize, 19, function(v)
+        State.Sliders.SkeletonJointSize = v
+    end)
+    CreateSlider(page, "Skeleton Head Size", 4, 20, State.Sliders.SkeletonHeadSize, 20, function(v)
+        State.Sliders.SkeletonHeadSize = v
+    end)
+    CreateSlider(page, "Target Head Size", 8, 28, State.Sliders.SkeletonHeadTargetSize, 21, function(v)
+        State.Sliders.SkeletonHeadTargetSize = v
+    end)
+
+    CreateSectionLabel(page, "Radar", 23)
+    CreateToggle(page, "Center Arrow Radar", State.Features.Radar, 24, function(v)
         State.Features.Radar = v
         if RadarUpdate then RadarUpdate() end
     end, "Radar", "Accent")
-    CreateSlider(page, "Radar Range", 50, 1000, State.Sliders.RadarRange, 13, function(v)
+    CreateSlider(page, "Radar Range", 50, 1000, State.Sliders.RadarRange, 25, function(v)
         State.Sliders.RadarRange = v
         if RadarUpdate then RadarUpdate() end
     end)
@@ -5567,7 +5536,7 @@ RunService.Heartbeat:Connect(function(dt)
                     RebuildSkeleton(plr)
                 end
 
-                if State.Features.SkeletonESP and withinRange and objs.SkeletonHead then
+                if State.Features.SkeletonESP and State.Features.SkeletonHeadMarker and withinRange and objs.SkeletonHead then
                     local headPart = char:FindFirstChild("Head")
                     if headPart and headPart:IsA("BasePart") then
                         local sh, headOnScreen = Camera:WorldToViewportPoint(headPart.Position + Vector3.new(0, 0.15, 0))
@@ -5580,10 +5549,10 @@ RunService.Heartbeat:Connect(function(dt)
                             local headAligned = State.Features.HeadTargetIndicator and cursorDistance <= 14
 
                             if headAligned then
-                                objs.SkeletonHead.Size = UDim2.fromOffset(15, 15)
+                                objs.SkeletonHead.Size = UDim2.fromOffset(State.Sliders.SkeletonHeadTargetSize, State.Sliders.SkeletonHeadTargetSize)
                                 objs.SkeletonHead.BackgroundColor3 = CONFIG.Colors.HeadTarget
                             else
-                                objs.SkeletonHead.Size = UDim2.fromOffset(10, 10)
+                                objs.SkeletonHead.Size = UDim2.fromOffset(State.Sliders.SkeletonHeadSize, State.Sliders.SkeletonHeadSize)
                                 if protected then
                                     objs.SkeletonHead.BackgroundColor3 = CONFIG.Colors.ProtectedESP
                                 elseif State.Features.SkeletonVisibilityCheck then
@@ -5628,13 +5597,14 @@ RunService.Heartbeat:Connect(function(dt)
                                 end
                                 if glow then
                                     glow.BackgroundColor3 = frame.BackgroundColor3
+                                    glow.Visible = State.Features.SkeletonGlow
                                 end
-                                frame.Size = UDim2.fromOffset(2, length)
+                                frame.Size = UDim2.fromOffset(math.max(1, State.Sliders.SkeletonThickness), length)
                                 frame.Position = UDim2.fromOffset(midX, midY)
                                 frame.Rotation = rotation
                                 frame.Visible = true
                                 if glow then
-                                    glow.Size = UDim2.fromOffset(6, length)
+                                    glow.Size = UDim2.fromOffset(math.max(1, State.Sliders.SkeletonGlowThickness), length)
                                     glow.Position = UDim2.fromOffset(midX, midY)
                                     glow.Rotation = rotation
                                     glow.Visible = true
@@ -5656,7 +5626,7 @@ RunService.Heartbeat:Connect(function(dt)
                 for _, joint in ipairs(objs.SkeletonJoints or {}) do
                     local part = char:FindFirstChild(joint.PartName)
                     local dot = joint.Frame
-                    if dot and part and part:IsA("BasePart") and State.Features.SkeletonESP and withinRange then
+                    if dot and part and part:IsA("BasePart") and State.Features.SkeletonESP and State.Features.SkeletonJoints and withinRange then
                         local sj, onScreen = Camera:WorldToViewportPoint(part.Position)
                         if onScreen and sj.Z > 0 then
                             dot.Position = UDim2.fromOffset(sj.X, sj.Y)
