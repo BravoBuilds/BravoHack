@@ -433,7 +433,7 @@ UI.VersionLabel.Font = Enum.Font.Gotham
 UI.VersionLabel.TextSize = 12
 UI.VersionLabel.TextColor3 = CONFIG.Colors.SubText
 UI.VersionLabel.TextXAlignment = Enum.TextXAlignment.Right
-UI.VersionLabel.Text = "v1.0.7"
+UI.VersionLabel.Text = "v1.0.9"
 UI.VersionLabel.Parent = UI.TopBar
 
 
