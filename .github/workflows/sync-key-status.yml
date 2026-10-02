@@ -1,0 +1,56 @@
+name: Sync key usage
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync Keys.txt
+        env:
+          API_URL: https://bravohack.tmneijsel.workers.dev/api/keys
+        run: |
+          curl --fail --silent --show-error "$API_URL" -o /tmp/key-status.json
+
+          node <<'NODE'
+          const fs = require("fs");
+          const data = JSON.parse(fs.readFileSync("/tmp/key-status.json", "utf8"));
+          if (!data.ok || !Array.isArray(data.keys)) {
+            throw new Error("Invalid key status response");
+          }
+
+          const lines = data.keys.map(item => {
+            let status = "UNUSED";
+            if (item.used && item.expired) status = "EXPIRED";
+            else if (item.used) status = "USED";
+
+            return item.expiresAt
+              ? item.key + "|24h|" + status + "|expires=" + item.expiresAt
+              : item.key + "|24h|" + status;
+          });
+
+          fs.writeFileSync("Keys.txt", lines.join("\n") + "\n");
+          NODE
+
+      - name: Commit status changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet -- Keys.txt; then
+            echo "No key status changes."
+            exit 0
+          fi
+
+          git add Keys.txt
+          git commit -m "Sync key usage status"
+          git push
