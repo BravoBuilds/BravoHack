@@ -5,3 +5,4 @@ compatibility_date = "2026-10-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "bravohack-keys"
+database_id = "69672193-34ad-4496-a6bf-9dc26720f2cc"
