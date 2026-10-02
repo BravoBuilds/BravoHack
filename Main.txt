@@ -213,49 +213,37 @@ local ApplyMovementSettings, ApplyFullbright, ApplyRemoveFog
 
 local EnableAutoRevive, DisableAutoRevive
 
-local function ForceRespawn()
-    local ok = pcall(function()
-        TeleportService:Teleport(game.PlaceId, LocalPlayer)
-    end)
-    return ok
-end
-
 EnableAutoRevive = function()
-    DisableAutoRevive()
-    local reviveState = { Connections = {}, Triggered = false }
-    State.AutoReviveState = reviveState
-
-    local function watchCharacter(char)
-        if not char or reviveState.Triggered then return end
-        local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 8)
-        if not hum or reviveState.Triggered then return end
-
-        local conn = hum.Died:Connect(function()
-            if not State.Features.AutoRevive or reviveState.Triggered then return end
-            reviveState.Triggered = true
-
-            task.delay(1.25, function()
-                if not State.Features.AutoRevive then return end
-
-                local current = LocalPlayer.Character
-                local currentHum = current and current:FindFirstChildOfClass("Humanoid")
-                if currentHum and currentHum.Health > 0 then
-                    reviveState.Triggered = false
-                    return
-                end
-
-                ForceRespawn()
-            end)
-        end)
-
-        table.insert(reviveState.Connections, conn)
+    if State.AutoReviveConnection then
+        pcall(function() State.AutoReviveConnection:Disconnect() end)
+        State.AutoReviveConnection = nil
     end
 
-    local charConn = LocalPlayer.CharacterAdded:Connect(function(char)
-        reviveState.Triggered = false
+    local function watchCharacter(char)
+        if not State.Features.AutoRevive or not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 10)
+        if not hum then return end
+
+        State.AutoReviveConnection = hum.Died:Connect(function()
+            if not State.Features.AutoRevive then return end
+
+            task.delay(1, function()
+                if not State.Features.AutoRevive then return end
+                local current = LocalPlayer.Character
+                local currentHum = current and current:FindFirstChildOfClass("Humanoid")
+
+                if currentHum and currentHum.Health > 0 then return end
+
+                pcall(function()
+                    TeleportService:Teleport(game.PlaceId)
+                end)
+            end)
+        end)
+    end
+
+    State.AutoReviveCharacterConnection = LocalPlayer.CharacterAdded:Connect(function(char)
         watchCharacter(char)
     end)
-    table.insert(reviveState.Connections, charConn)
 
     if LocalPlayer.Character then
         watchCharacter(LocalPlayer.Character)
@@ -263,12 +251,13 @@ EnableAutoRevive = function()
 end
 
 DisableAutoRevive = function()
-    local reviveState = State.AutoReviveState
-    State.AutoReviveState = nil
-    if reviveState and reviveState.Connections then
-        for _, conn in ipairs(reviveState.Connections) do
-            pcall(function() conn:Disconnect() end)
-        end
+    if State.AutoReviveConnection then
+        pcall(function() State.AutoReviveConnection:Disconnect() end)
+        State.AutoReviveConnection = nil
+    end
+    if State.AutoReviveCharacterConnection then
+        pcall(function() State.AutoReviveCharacterConnection:Disconnect() end)
+        State.AutoReviveCharacterConnection = nil
     end
 end
 
