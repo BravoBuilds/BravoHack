@@ -158,7 +158,7 @@ export default {
 
     try {
       const url = new URL(request.url);
-      if (url.pathname === "/api/key" && request.method === "POST") return await handlePost(request, env);
+      if ((url.pathname === "/" || url.pathname === "/api/key") && request.method === "POST") return await handlePost(request, env);
       if (url.pathname === "/api/key" && request.method === "GET") return await handleGet(request, env);
       if (url.pathname === "/api/keys" && request.method === "GET") return await handleList(env);
       return json({ ok:true, service:"BravoHack Key API", endpoint:"/api/key" });
