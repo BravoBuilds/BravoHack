@@ -554,7 +554,7 @@ UI.ProfileName.Parent = UI.StatusBar
 
 UI.StatusLabel = UI.ProfileName
 
-KeyGate.ApiURL = "https://YOUR-VERCEL-PROJECT.vercel.app/api/key"
+KeyGate.ApiURL = "https://bravohack-n0y4ic0x0-bravo-hack.vercel.app/api/key"
 
 local function LoadPersistentSettings()
     if type(isfile) ~= "function" or type(readfile) ~= "function" then return end
