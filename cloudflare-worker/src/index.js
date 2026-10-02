@@ -27,7 +27,7 @@ function parseDuration(value) {
   const v = String(value || "perm").trim().toLowerCase();
   if (!v || v === "perm" || v === "permanent" || v === "forever") return null;
 
-  const match = v.match(/^(\\d+(?:\\.\\d+)?)(s|m|h|d|w)$/);
+  const match = v.match(/^(\d+(?:\.\d+)?)(s|m|h|d|w)$/);
   if (!match) return undefined;
 
   const amount = Number(match[1]);
