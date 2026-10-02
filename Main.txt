@@ -688,6 +688,10 @@ local function AuthorizeKeyWithAPI(key)
         return false, "Invalid key."
     end
 
+    if statusCode == 410 and data.error == "KEY_EXPIRED" then
+        return false, "This key has expired. Please get a new key."
+    end
+
     if statusCode == 409 and data.error == "KEY_ALREADY_USED" then
         return false, "This key is already bound to another Roblox UserId."
     end
