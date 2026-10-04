@@ -127,6 +127,12 @@ local State = {
         SilentAimTeamCheck = false,
         SilentAimWallCheck = false,
         SilentAimPrediction = false,
+        RageMode = false,
+        RageAlwaysOn = false,
+        RageIgnoreTeams = false,
+        RageIgnoreWalls = false,
+        RageNoSmoothing = false,
+        RageTriggerbot = false,
         ForceField = false,
         HideFreecamBar = false,
         TeamCheck = false,
@@ -3926,6 +3932,56 @@ do
     CreateSlider(page, "Silent Aim Prediction Amount", 0, 0.5, State.Sliders.SilentAimPredictionAmount, 35, function(v)
         State.Sliders.SilentAimPredictionAmount = v
     end, 2)
+    
+    CreateSectionLabel(page, "Rage", 36)
+    CreateToggle(page, "Rage Mode", State.Features.RageMode, 37, function(v)
+        State.Features.RageMode = v
+        if v then
+            State.Features.Aimbot = true
+            State.Features.AimbotAlwaysOn = true
+            State.Features.TeamCheck = false
+            State.Features.WallCheck = false
+            State.Features.SilentAim = true
+            State.Features.SilentAimTeamCheck = false
+            State.Features.SilentAimWallCheck = false
+            State.Features.Triggerbot = true
+            State.Features.TriggerbotAlwaysOn = true
+            State.Features.TriggerbotTeamCheck = false
+            State.Features.TriggerbotWallCheck = false
+            State.Sliders.AimFOV = 1000
+            State.Sliders.AimbotMaxDistance = 3000
+            State.Sliders.AimbotHitChance = 100
+            State.Sliders.SilentAimFOV = 1000
+            State.Sliders.SilentAimHitChance = 100
+            State.Sliders.TriggerbotHitChance = 100
+            State.Sliders.AimSmoothness = 0.05
+        end
+    end, "RageMode", "Accent")
+    CreateToggle(page, "Always On", State.Features.RageAlwaysOn, 38, function(v)
+        State.Features.RageAlwaysOn = v
+        State.Features.AimbotAlwaysOn = v
+        State.Features.TriggerbotAlwaysOn = v
+    end, "RageAlwaysOn")
+    CreateToggle(page, "Ignore Teams", State.Features.RageIgnoreTeams, 39, function(v)
+        State.Features.RageIgnoreTeams = v
+        State.Features.TeamCheck = not v
+        State.Features.SilentAimTeamCheck = not v
+        State.Features.TriggerbotTeamCheck = not v
+    end, "RageIgnoreTeams")
+    CreateToggle(page, "Ignore Walls", State.Features.RageIgnoreWalls, 40, function(v)
+        State.Features.RageIgnoreWalls = v
+        State.Features.WallCheck = not v
+        State.Features.SilentAimWallCheck = not v
+        State.Features.TriggerbotWallCheck = not v
+    end, "RageIgnoreWalls")
+    CreateToggle(page, "No Smoothing", State.Features.RageNoSmoothing, 41, function(v)
+        State.Features.RageNoSmoothing = v
+        State.Sliders.AimSmoothness = v and 0.05 or 0.25
+    end, "RageNoSmoothing")
+    CreateToggle(page, "Rage Triggerbot", State.Features.RageTriggerbot, 42, function(v)
+        State.Features.RageTriggerbot = v
+        State.Features.Triggerbot = v
+    end, "RageTriggerbot")
 end
 
 
