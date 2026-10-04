@@ -294,7 +294,7 @@ KeyGate.Subtitle.Font = Enum.Font.Gotham
 KeyGate.Subtitle.TextSize = 14
 KeyGate.Subtitle.TextColor3 = CONFIG.Colors.SubText
 KeyGate.Subtitle.TextWrapped = true
-KeyGate.Subtitle.Text = "Enter an access key. Each key is permanently bound to one Roblox UserId after first use."
+KeyGate.Subtitle.Text = "Enter an access key. Each key is bound to one Roblox UserId for 24 hours after first use."
 KeyGate.Subtitle.ZIndex = 101
 KeyGate.Subtitle.Parent = KeyGate.Frame
 
@@ -618,65 +618,109 @@ local function SetKeyGateVisible(visible)
 end
 
 local function GetRequestFunction()
-    if type(request) == "function" then
-        return request
-    elseif type(http_request) == "function" then
-        return http_request
-    elseif type(syn) == "table" and type(syn.request) == "function" then
-        return syn.request
+    local candidates = {
+        function()
+            return type(request) == "function" and request or nil
+        end,
+        function()
+            return type(http_request) == "function" and http_request or nil
+        end,
+        function()
+            return type(http) == "table" and type(http.request) == "function" and http.request or nil
+        end,
+        function()
+            return type(syn) == "table" and type(syn.request) == "function" and syn.request or nil
+        end,
+        function()
+            return type(fluxus) == "table" and type(fluxus.request) == "function" and fluxus.request or nil
+        end,
+    }
+
+    for _, getter in ipairs(candidates) do
+        local ok, fn = pcall(getter)
+        if ok and type(fn) == "function" then
+            return fn
+        end
     end
+
     return nil
 end
 
 local function AuthorizeKeyWithAPI(key)
     local requestFn = GetRequestFunction()
     if not requestFn then
-        return false, "HTTP requests are unavailable in this executor."
+        return false, "Executor has no supported HTTP request function."
     end
 
     local HttpService = game:GetService("HttpService")
     local okEncode, body = pcall(function()
         return HttpService:JSONEncode({
-            key = key,
+            key = tostring(key),
             userId = tostring(LocalPlayer.UserId),
         })
     end)
+
     if not okEncode then
         return false, "Failed to encode API request."
     end
 
+    local requestData = {
+        Url = "https://bravohack.tmneijsel.workers.dev",
+        Method = "POST",
+        Headers = {
+            ["Content-Type"] = "application/json",
+            ["Accept"] = "application/json",
+        },
+        Body = body,
+    }
+
     local okRequest, response = pcall(function()
-        return requestFn({
-            Url = KeyGate.ApiURL,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json",
-                ["Accept"] = "application/json",
-            },
-            Body = body,
-        })
+        return requestFn(requestData)
     end)
 
-    if not okRequest or type(response) ~= "table" then
-        return false, "Key API connection failed."
+    if not okRequest then
+        return false, "API request failed: " .. tostring(response)
     end
 
-    local statusCode = tonumber(response.StatusCode or response.Status or 0) or 0
-    local responseBody = response.Body or response.body
-    if type(responseBody) ~= "string" or responseBody == "" then
-        return false, statusCode >= 500 and "Key API is temporarily unavailable." or "Key API returned an empty response."
+    if type(response) ~= "table" then
+        return false, "API returned an invalid response: " .. tostring(response)
+    end
+
+    local statusCode = tonumber(
+        response.StatusCode
+        or response.Status
+        or response.statusCode
+        or response.status
+        or response.Code
+        or response.code
+        or 0
+    ) or 0
+
+    local responseBody =
+        response.Body
+        or response.body
+        or response.ResponseBody
+        or response.responseBody
+
+    if type(responseBody) ~= "string" then
+        return false, "API returned no response body. HTTP status: " .. tostring(statusCode)
+    end
+
+    if responseBody == "" then
+        return false, "API returned an empty response. HTTP status: " .. tostring(statusCode)
     end
 
     local decodeOk, data = pcall(function()
         return HttpService:JSONDecode(responseBody)
     end)
+
     if not decodeOk or type(data) ~= "table" then
-        return false, "Key API returned invalid JSON."
+        return false, "API returned invalid JSON. HTTP " .. tostring(statusCode) .. ": " .. tostring(responseBody)
     end
 
     if statusCode == 200 and data.ok == true then
         if data.claimed == true then
-            return true, "Access granted. Key is now bound to your Roblox UserId."
+            return true, "Access granted. Key is now bound to your Roblox UserId for 24 hours."
         end
         return true, "Access granted. Key is already bound to your Roblox UserId."
     end
@@ -685,19 +729,23 @@ local function AuthorizeKeyWithAPI(key)
         return false, "Invalid key."
     end
 
-    if statusCode == 410 and data.error == "KEY_EXPIRED" then
-        return false, "This key has expired. Please get a new key."
-    end
-
     if statusCode == 409 and data.error == "KEY_ALREADY_USED" then
         return false, "This key is already bound to another Roblox UserId."
     end
 
-    if statusCode >= 500 then
-        return false, "Key API is temporarily unavailable."
+    if statusCode == 410 and data.error == "KEY_EXPIRED" then
+        return false, "This key has expired. Please get a new key."
     end
 
-    return false, tostring(data.message or data.error or "Key authorization failed.")
+    if statusCode == 503 and data.error == "KEY_SOURCE_UNAVAILABLE" then
+        return false, "API is online, but GitHub Keys.txt is unavailable."
+    end
+
+    if statusCode >= 500 then
+        return false, "API server error (" .. tostring(statusCode) .. "): " .. tostring(data.error or data.message or "unknown error")
+    end
+
+    return false, tostring(data.message or data.error or ("Key authorization failed. HTTP " .. tostring(statusCode)))
 end
 
 local function OpenAuthorizedMenu()
@@ -4417,16 +4465,12 @@ UI.PlayerListWindow.Visible=false
 UI.ChatLogWindow.Visible=false
 UI.InventoryWindow.Visible=false
 
-local function BindChatPlayer(plr)
-    plr.Chatted:Connect(function(message)
-        AddChatMessage(plr.Name .. ": " .. message)
-    end)
-end
 for _, plr in ipairs(Players:GetPlayers()) do
-    if plr ~= LocalPlayer then BindChatPlayer(plr) end
+    if plr ~= LocalPlayer and MiscUI.PlayerListFrame then
+        RefreshPlayerListUI()
+    end
 end
 Players.PlayerAdded:Connect(function(plr)
-    if plr ~= LocalPlayer then BindChatPlayer(plr) end
     if MiscUI.PlayerListFrame then RefreshPlayerListUI() end
 end)
 Players.PlayerRemoving:Connect(function(plr)
