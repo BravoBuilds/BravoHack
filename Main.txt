@@ -137,6 +137,7 @@ local State = {
         SkeletonHeadMarker = true,
         HeadTargetIndicator = true,
         Radar = false,
+        RadarTeamCheck = true,
     },
     Sliders = {
         ESPDistance = 300,
@@ -3103,7 +3104,7 @@ do
         marker.BackgroundTransparency = 1
         marker.Font = Enum.Font.GothamBold
         marker.TextSize = 18
-        marker.Text = "▲"
+        marker.Text = "+"
         marker.TextStrokeTransparency = 0.05
         marker.TextColor3 = CONFIG.Colors.Accent
         marker.TextXAlignment = Enum.TextXAlignment.Center
@@ -3152,7 +3153,7 @@ do
                 local root = char and char:FindFirstChild("HumanoidRootPart")
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-                if root and hum and hum.Health > 0 then
+                if root and hum and hum.Health > 0 and (not State.Features.RadarTeamCheck or plr.Team ~= LocalPlayer.Team) then
                     local flat = Vector3.new(root.Position.X - camPos.X, 0, root.Position.Z - camPos.Z)
                     local distance = flat.Magnitude
 
@@ -3805,7 +3806,11 @@ do
         State.Features.Radar = v
         if RadarUpdate then RadarUpdate() end
     end, "Radar", "Accent")
-    CreateSlider(page, "Radar Range", 50, 1000, State.Sliders.RadarRange, 25, function(v)
+    CreateToggle(page, "Radar Team Check", State.Features.RadarTeamCheck, 25, function(v)
+        State.Features.RadarTeamCheck = v
+        if RadarUpdate then RadarUpdate() end
+    end, "RadarTeamCheck", "Accent")
+    CreateSlider(page, "Radar Range", 50, 1000, State.Sliders.RadarRange, 26, function(v)
         State.Sliders.RadarRange = v
         if RadarUpdate then RadarUpdate() end
     end)
