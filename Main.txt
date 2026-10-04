@@ -549,7 +549,7 @@ UI.ProfileName = Instance.new("TextLabel")
 UI.ProfileName.Name = "ProfileName"
 UI.ProfileName.BackgroundTransparency = 1
 UI.ProfileName.Position = UDim2.fromOffset(40, 0)
-UI.ProfileName.Size = UDim2.new(0, 260, 1, 0)
+UI.ProfileName.Size = UDim2.new(1, -50, 1, 0)
 UI.ProfileName.Font = Enum.Font.GothamMedium
 UI.ProfileName.TextSize = 12
 UI.ProfileName.TextColor3 = CONFIG.Colors.Text
@@ -748,7 +748,44 @@ local function AuthorizeKeyWithAPI(key)
     return false, tostring(data.message or data.error or ("Key authorization failed. HTTP " .. tostring(statusCode)))
 end
 
-local function OpenAuthorizedMenu()
+local KeyExpiresAt = nil
+
+local function FormatTimeRemaining(expiresAt)
+    local timestamp = tonumber(expiresAt)
+    if not timestamp then return "Unknown" end
+
+    local remaining = math.max(0, math.floor(timestamp - os.time()))
+    local hours = math.floor(remaining / 3600)
+    local minutes = math.floor((remaining % 3600) / 60)
+    local seconds = remaining % 60
+
+    if hours > 0 then
+        return string.format("%dh %02dm", hours, minutes)
+    end
+    return string.format("%dm %02ds", minutes, seconds)
+end
+
+local function StartKeyRemainingTimer(expiresAt)
+    local timestamp = tonumber(expiresAt)
+    if not timestamp then return end
+
+    KeyExpiresAt = timestamp
+    task.spawn(function()
+        while not _G.__BravoHackUnloaded and State.KeyAuthorized and KeyExpiresAt == timestamp do
+            if UI.ProfileName and UI.ProfileName.Parent then
+                local remaining = timestamp - os.time()
+                if remaining <= 0 then
+                    UI.ProfileName.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name .. "  |  Time remaining: 00m 00s"
+                    break
+                end
+                UI.ProfileName.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name .. "  |  Time remaining: " .. FormatTimeRemaining(timestamp)
+            end
+            task.wait(1)
+        end
+    end)
+end
+
+local function OpenAuthorizedMenu(expiresAt)
     if _G.__BravoHackUnloaded then return end
     State.KeyAuthorized = true
     State.MenuOpen = true
@@ -802,7 +839,7 @@ SubmitKey = function()
     KeyGate.Status.Text = "Checking key with external API..."
     KeyGate.Status.TextColor3 = CONFIG.Colors.SubText
 
-    local valid, message = AuthorizeKeyWithAPI(key)
+    local valid, message, expiresAt = AuthorizeKeyWithAPI(key)
     KeyGate.InteractionBusy = false
 
     if not valid then
