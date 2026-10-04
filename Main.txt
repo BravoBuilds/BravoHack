@@ -243,14 +243,15 @@ UI.ScreenGui = Instance.new("ScreenGui")
 UI.ScreenGui.Name = "CheatMenuGUI"
 UI.ScreenGui.ResetOnSpawn = false
 UI.ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-UI.ScreenGui.DisplayOrder = 10000
+UI.ScreenGui.IgnoreGuiInset = true
+UI.ScreenGui.DisplayOrder = 2147483647
 UI.ScreenGui.Parent = PlayerGui
 
 UI.Overlay = Instance.new("ScreenGui")
 UI.Overlay.Name = "CheatMenuOverlay"
 UI.Overlay.ResetOnSpawn = false
 UI.Overlay.IgnoreGuiInset = true
-UI.Overlay.DisplayOrder = 9999
+UI.Overlay.DisplayOrder = 2147483646
 UI.Overlay.Parent = PlayerGui
 
 local KeyGate = {}
@@ -3104,7 +3105,7 @@ do
         marker.BackgroundTransparency = 1
         marker.Font = Enum.Font.GothamBold
         marker.TextSize = 18
-        marker.Text = "+"
+        marker.Text = "▲"
         marker.TextStrokeTransparency = 0.05
         marker.TextColor3 = CONFIG.Colors.Accent
         marker.TextXAlignment = Enum.TextXAlignment.Center
@@ -3153,7 +3154,7 @@ do
                 local root = char and char:FindFirstChild("HumanoidRootPart")
                 local hum = char and char:FindFirstChildOfClass("Humanoid")
 
-                if root and hum and hum.Health > 0 and (not State.Features.RadarTeamCheck or plr.Team ~= LocalPlayer.Team) then
+                if root and hum and hum.Health > 0 then
                     local flat = Vector3.new(root.Position.X - camPos.X, 0, root.Position.Z - camPos.Z)
                     local distance = flat.Magnitude
 
@@ -3170,8 +3171,10 @@ do
                         local marker = getMarker(plr)
                         marker.Visible = true
                         marker.Position = UDim2.fromOffset(x, y)
-                        marker.TextColor3 = getRadarColor(distance)
-                        marker.Rotation = math.deg(angle)
+                        local friendly = IsProtectedPlayer(plr) or (State.Features.RadarTeamCheck and LocalPlayer.Team ~= nil and plr.Team ~= nil and LocalPlayer.Team == plr.Team)
+                        marker.Text = friendly and "+" or "▲"
+                        marker.TextColor3 = friendly and CONFIG.Colors.ProtectedESP or getRadarColor(distance)
+                        marker.Rotation = friendly and 0 or math.deg(angle)
                         active[plr] = true
                     end
                 end
