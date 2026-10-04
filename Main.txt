@@ -720,9 +720,9 @@ local function AuthorizeKeyWithAPI(key)
 
     if statusCode == 200 and data.ok == true then
         if data.claimed == true then
-            return true, "Access granted. Key is now bound to your Roblox UserId for 24 hours."
+            return true, "Access granted. Key is now bound to your Roblox UserId for 24 hours.", data.expiresAt and DateTime.fromIsoDate(data.expiresAt).UnixTimestamp or nil
         end
-        return true, "Access granted. Key is already bound to your Roblox UserId."
+        return true, "Access granted. Key is already bound to your Roblox UserId.", data.expiresAt and DateTime.fromIsoDate(data.expiresAt).UnixTimestamp or nil
     end
 
     if statusCode == 404 and data.error == "INVALID_KEY" then
@@ -813,6 +813,7 @@ local function OpenAuthorizedMenu(expiresAt)
         UI.StatusLabel.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name
     end
     SetKeyGateVisible(false)
+    StartKeyRemainingTimer(expiresAt)
     task.defer(function()
         if RunAutoLoadConfig then
             pcall(RunAutoLoadConfig)
