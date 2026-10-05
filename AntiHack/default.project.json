@@ -1,0 +1,9 @@
+{
+  "name": "AntiHack",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {"$className":"ReplicatedStorage","AntiHack":{"$path":"src/ReplicatedStorage/AntiHack"}},
+    "ServerScriptService": {"$className":"ServerScriptService","AntiHack":{"$path":"src/ServerScriptService/AntiHack"}},
+    "StarterPlayer": {"$className":"StarterPlayer","StarterPlayerScripts":{"$className":"StarterPlayerScripts","AntiHack":{"$path":"src/StarterPlayer/StarterPlayerScripts/AntiHack"}}}
+  }
+}
