@@ -7,6 +7,7 @@ return {
  Risk={DecayPerSecond=0.15,WarningThreshold=20,FlagThreshold=45,RestrictThreshold=70,AutoBanThreshold=95,AutoBanIndependentSignals=3},
  Punishment={WarnEnabled=true,KickEnabled=true,AutoBanEnabled=false,TemporaryBanSeconds=86400},
  Evidence={MaxTimeline=40},
+ Webhook={Enabled=false,Url="",Cooldown=10},
  Whitelist={},
  Logging={PrintDetections=true,PrintSecurityErrors=true},
 }
