@@ -1,0 +1,6 @@
+local U=require(game.ReplicatedStorage.AntiHack.Utilities)
+assert(U.IsFiniteNumber(1))
+assert(not U.IsFiniteNumber(0/0))
+assert(not U.IsFiniteNumber(math.huge))
+assert(U.IsFiniteVector3(Vector3.new(1,2,3)))
+print("[AntiHack tests] utility smoke tests passed")
