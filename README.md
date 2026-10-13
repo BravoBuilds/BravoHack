@@ -1,7 +1,7 @@
 # BravoHack — Cheat Menu
 
 > **Roblox cheat menu / client-side executor UI**  
-> Current release: **v1.0.9**
+> Current release: **v1.2.1**
 
 ![BravoHack overview](assets/overview.svg)
 
@@ -330,6 +330,7 @@ The gate provides:
 - Get Key button
 - Uninject button
 - Optional remembered-key behavior
+- Live key countdown in the menu footer, with warning colors as expiry approaches
 
 The Get Key flow references the repository's:
 
@@ -337,7 +338,7 @@ The Get Key flow references the repository's:
 Keys.txt
 ```
 
-The client displays the immutable Roblox `Player.UserId` used for the binding. The server is authoritative: it reads the real `player.UserId`, so the client cannot choose a different binding ID. The remembered key is still stored locally through the executor's file system when enabled, but every automatic login is revalidated by the server.
+The client displays the immutable Roblox `Player.UserId` used for the binding. The server is authoritative: it reads the real `player.UserId`, so the client cannot choose a different binding ID. The remembered key is still stored locally through the executor's file system when enabled, but every automatic login is revalidated by the server. The menu footer shows the time remaining until the server-issued expiry; it turns orange near expiry and red in the final five minutes or after expiry.
 
 ---
 
@@ -515,7 +516,7 @@ These files are portable, version-controlled visual references for the menu and 
 
 # Version
 
-**v1.0.9**
+**v1.2.1**
 
 Latest documented changes include:
 
