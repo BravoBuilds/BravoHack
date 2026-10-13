@@ -447,7 +447,7 @@ UI.VersionLabel.Font = Enum.Font.Gotham
 UI.VersionLabel.TextSize = 12
 UI.VersionLabel.TextColor3 = CONFIG.Colors.SubText
 UI.VersionLabel.TextXAlignment = Enum.TextXAlignment.Right
-UI.VersionLabel.Text = "v1.2.0"
+UI.VersionLabel.Text = "v1.2.1"
 UI.VersionLabel.Parent = UI.TopBar
 
 
@@ -557,7 +557,7 @@ UI.ProfileName = Instance.new("TextLabel")
 UI.ProfileName.Name = "ProfileName"
 UI.ProfileName.BackgroundTransparency = 1
 UI.ProfileName.Position = UDim2.fromOffset(40, 0)
-UI.ProfileName.Size = UDim2.new(1, -50, 1, 0)
+UI.ProfileName.Size = UDim2.new(1, -285, 1, 0)
 UI.ProfileName.Font = Enum.Font.GothamMedium
 UI.ProfileName.TextSize = 12
 UI.ProfileName.TextColor3 = CONFIG.Colors.Text
@@ -565,6 +565,20 @@ UI.ProfileName.TextXAlignment = Enum.TextXAlignment.Left
 UI.ProfileName.TextTruncate = Enum.TextTruncate.AtEnd
 UI.ProfileName.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name
 UI.ProfileName.Parent = UI.StatusBar
+
+UI.KeyExpiryLabel = Instance.new("TextLabel")
+UI.KeyExpiryLabel.Name = "KeyExpiryLabel"
+UI.KeyExpiryLabel.BackgroundTransparency = 1
+UI.KeyExpiryLabel.AnchorPoint = Vector2.new(1, 0)
+UI.KeyExpiryLabel.Position = UDim2.new(1, -105, 0, 0)
+UI.KeyExpiryLabel.Size = UDim2.fromOffset(135, CONFIG.Sizes.StatusBar)
+UI.KeyExpiryLabel.Font = Enum.Font.GothamMedium
+UI.KeyExpiryLabel.TextSize = 11
+UI.KeyExpiryLabel.TextColor3 = CONFIG.Colors.SubText
+UI.KeyExpiryLabel.TextXAlignment = Enum.TextXAlignment.Right
+UI.KeyExpiryLabel.Text = "Key: --"
+UI.KeyExpiryLabel.TextTruncate = Enum.TextTruncate.AtEnd
+UI.KeyExpiryLabel.Parent = UI.StatusBar
 
 UI.StatusLabel = UI.ProfileName
 
@@ -727,10 +741,20 @@ local function AuthorizeKeyWithAPI(key)
     end
 
     if statusCode == 200 and data.ok == true then
-        if data.claimed == true then
-            return true, "Access granted. Key is now bound to your Roblox UserId for 24 hours.", data.expiresAt and DateTime.fromIsoDate(data.expiresAt).UnixTimestamp or nil
+        local expiryTimestamp = nil
+        if type(data.expiresAt) == "string" and data.expiresAt ~= "" then
+            local dateOk, parsedDate = pcall(function()
+                return DateTime.fromIsoDate(data.expiresAt)
+            end)
+            if dateOk and parsedDate then
+                expiryTimestamp = parsedDate.UnixTimestamp
+            end
         end
-        return true, "Access granted. Key is already bound to your Roblox UserId.", data.expiresAt and DateTime.fromIsoDate(data.expiresAt).UnixTimestamp or nil
+
+        if data.claimed == true then
+            return true, "Access granted. Key is now bound to your Roblox UserId for 24 hours.", expiryTimestamp
+        end
+        return true, "Access granted. Key is already bound to your Roblox UserId.", expiryTimestamp
     end
 
     if statusCode == 404 and data.error == "INVALID_KEY" then
@@ -775,18 +799,33 @@ end
 
 local function StartKeyRemainingTimer(expiresAt)
     local timestamp = tonumber(expiresAt)
-    if not timestamp then return end
+    if not timestamp then
+        if UI.KeyExpiryLabel and UI.KeyExpiryLabel.Parent then
+            UI.KeyExpiryLabel.Text = "Key: unknown"
+            UI.KeyExpiryLabel.TextColor3 = CONFIG.Colors.SubText
+        end
+        return
+    end
 
     KeyExpiresAt = timestamp
     task.spawn(function()
         while not _G.__BravoHackUnloaded and State.KeyAuthorized and KeyExpiresAt == timestamp do
-            if UI.ProfileName and UI.ProfileName.Parent then
-                local remaining = timestamp - os.time()
+            local remaining = timestamp - os.time()
+            if UI.KeyExpiryLabel and UI.KeyExpiryLabel.Parent then
                 if remaining <= 0 then
-                    UI.ProfileName.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name .. "  |  Time remaining: 00m 00s"
+                    UI.KeyExpiryLabel.Text = "Key: expired"
+                    UI.KeyExpiryLabel.TextColor3 = CONFIG.Colors.Red
                     break
                 end
-                UI.ProfileName.Text = LocalPlayer.DisplayName .. "  @" .. LocalPlayer.Name .. "  |  Time remaining: " .. FormatTimeRemaining(timestamp)
+
+                UI.KeyExpiryLabel.Text = "Key: " .. FormatTimeRemaining(timestamp)
+                if remaining <= 300 then
+                    UI.KeyExpiryLabel.TextColor3 = CONFIG.Colors.Red
+                elseif remaining <= 3600 then
+                    UI.KeyExpiryLabel.TextColor3 = Color3.fromRGB(255, 175, 65)
+                else
+                    UI.KeyExpiryLabel.TextColor3 = CONFIG.Colors.Green
+                end
             end
             task.wait(1)
         end
@@ -865,7 +904,7 @@ SubmitKey = function()
     else
         pcall(ClearRememberedKeyFile)
     end
-    OpenAuthorizedMenu()
+    OpenAuthorizedMenu(expiresAt)
 
     task.defer(function()
         pcall(function() KeyGate.Gui:Destroy() end)
@@ -961,12 +1000,12 @@ task.spawn(function()
     if State.Features.AutoRememberKey then
         local remembered = LoadRememberedKey()
         if remembered then
-            local valid, message = AuthorizeKeyWithAPI(remembered)
+            local valid, message, expiresAt = AuthorizeKeyWithAPI(remembered)
             if valid then
                 KeyGate.Input.Text = remembered
                 KeyGate.Status.Text = "Remembered key accepted for UserId " .. tostring(LocalPlayer.UserId) .. "."
                 KeyGate.Status.TextColor3 = CONFIG.Colors.Green
-                OpenAuthorizedMenu()
+                OpenAuthorizedMenu(expiresAt)
             else
                 ClearRememberedKeyFile()
                 KeyGate.Status.Text = message or "Remembered key is no longer valid for this UserId."
