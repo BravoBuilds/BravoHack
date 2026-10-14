@@ -146,7 +146,7 @@ local State = {
         RadarTeamCheck = true,
     },
     Sliders = {
-        ESPDistance = 300,
+        ESPDistance = 10000,
         AimFOV = 350,
         AimSmoothness = 0.25,
         AimbotMaxDistance = 1000,
@@ -165,7 +165,7 @@ local State = {
         TimeOfDay = 14,
         Gravity = 196.2,
         UIScale = 1,
-        RadarRange = 300,
+        RadarRange = 10000,
         RadarSize = 85,
         SkeletonThickness = 2,
         SkeletonGlowThickness = 6,
@@ -3787,7 +3787,7 @@ do
         State.Features.Tracers = v
         RefreshTracking()
     end, "Tracers", "Tracer")
-    CreateSlider(page, "Max ESP distance", 50, 1000, State.Sliders.ESPDistance, 6, function(v)
+    CreateSlider(page, "ESP distance (studs)", 50, 10000, State.Sliders.ESPDistance, 6, function(v)
         State.Sliders.ESPDistance = v
     end)
 
@@ -3858,7 +3858,7 @@ do
         State.Features.RadarTeamCheck = v
         if RadarUpdate then RadarUpdate() end
     end, "RadarTeamCheck", "Accent")
-    CreateSlider(page, "Radar Range", 50, 1000, State.Sliders.RadarRange, 26, function(v)
+    CreateSlider(page, "Radar range (studs)", 50, 10000, State.Sliders.RadarRange, 26, function(v)
         State.Sliders.RadarRange = v
         if RadarUpdate then RadarUpdate() end
     end)
@@ -3870,7 +3870,7 @@ end
 
 do
     local page = Pages.Combat
-    CreateSectionLabel(page, "Aimbot", 1)
+    CreateSectionLabel(page, "Aim assist (advanced)", 1)
     CreateAimTargetDropdown(page)
     CreateToggle(page, "Enable Aimbot", false, 3, function(v)
         State.Features.Aimbot = v
@@ -3890,13 +3890,13 @@ do
     CreateToggle(page, "Wall Check", false, 8, function(v)
         State.Features.WallCheck = v
     end, "WallCheck")
-    CreateSlider(page, "Aimbot FOV (pixels)", 20, 1000, State.Sliders.AimFOV, 9, function(v)
+    CreateSlider(page, "Aim area (pixels)", 20, 1000, State.Sliders.AimFOV, 9, function(v)
         State.Sliders.AimFOV = v
     end)
     CreateSlider(page, "Aimbot Smoothness", 0.05, 1, State.Sliders.AimSmoothness, 10, function(v)
         State.Sliders.AimSmoothness = v
     end, 2)
-    CreateSlider(page, "Aimbot Max Distance", 50, 3000, State.Sliders.AimbotMaxDistance, 11, function(v)
+    CreateSlider(page, "Aim distance (studs)", 50, 3000, State.Sliders.AimbotMaxDistance, 11, function(v)
         State.Sliders.AimbotMaxDistance = v
     end)
     CreateSlider(page, "Aimbot Hit Chance (%)", 1, 100, State.Sliders.AimbotHitChance, 12, function(v)
@@ -3912,7 +3912,7 @@ do
         State.Features.ShowFOV = v
     end, "ShowFOV", "Accent")
 
-    CreateSectionLabel(page, "Triggerbot", 16)
+    CreateSectionLabel(page, "Auto-click (advanced)", 16)
     CreateToggle(page, "Enable Triggerbot", false, 17, function(v)
         State.Features.Triggerbot = v
     end, "Triggerbot")
@@ -3936,7 +3936,7 @@ do
     end, "TriggerbotUseCrosshair")
     local triggerDropdownRow = CreateTriggerbotTargetDropdown(page)
     triggerDropdownRow.LayoutOrder = 23
-    CreateSlider(page, "Triggerbot FOV (pixels)", 5, 300, State.Sliders.TriggerbotFOV, 24, function(v)
+    CreateSlider(page, "Auto-click area (pixels)", 5, 300, State.Sliders.TriggerbotFOV, 24, function(v)
         State.Sliders.TriggerbotFOV = v
     end)
     CreateSlider(page, "Triggerbot Delay (sec)", 0, 0.5, State.Sliders.TriggerbotDelay, 25, function(v)
@@ -3949,7 +3949,7 @@ do
         State.Sliders.TriggerbotHitChance = v
     end)
 
-    CreateSectionLabel(page, "Silent Aim", 28)
+    CreateSectionLabel(page, "Silent targeting (advanced)", 28)
     CreateToggle(page, "Enable Silent Aim", false, 29, function(v)
         State.Features.SilentAim = v
     end, "SilentAim")
