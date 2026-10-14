@@ -1,25 +1,10 @@
 # BravoHack Key API
 
-This directory contains a Vercel serverless API that keeps key usage in the repository's `Keys.txt`.
+The active key API is the Cloudflare Worker in `cloudflare-worker/src/index.js`. It uses the D1 database configured in `cloudflare-worker/wrangler.toml`.
 
-## Endpoints
+## Client endpoints
 
-### Check a key
-
-`GET /api/key?key=YOUR_KEY`
-
-Example response:
-
-```json
-{
-  "ok": true,
-  "key": "KEY...",
-  "used": true,
-  "userId": "123456789"
-}
-```
-
-### Claim a key
+### Claim or validate a key
 
 `POST /api/key`
 
@@ -32,38 +17,65 @@ Body:
 }
 ```
 
-A successful first claim changes the corresponding line in `Keys.txt` to:
+A first claim binds a key to that UserId and records the claim time. Repeating the request from the same UserId is idempotent; a different UserId is rejected. The response includes `claimedAt`, `expiresAt`, and the duration. New keys use their configured duration starting from their first claim.
 
-```
-KEY...|USED|123456789
-```
+### Check one known key
 
-A second request from the same UserId succeeds idempotently. A different UserId receives HTTP 409 with `KEY_ALREADY_USED`.
+`GET /api/key?key=KEY...`
 
-## Deployment
+Returns validity, usage, the claimed UserId and expiry for that key. Treat UserIds as potentially sensitive operational data even though the legacy endpoint is compatible with the existing client.
 
-Deploy the repository as a Vercel project and configure these server-side environment variables:
+### Legacy public listing
 
-- `GITHUB_TOKEN`: a GitHub token with Contents read/write access to this repository.
-- `GITHUB_REPO`: `BravoBuilds/BravoHack`
-- `GITHUB_BRANCH`: `main`
+`GET /api/keys`
 
-Never put `GITHUB_TOKEN` in `Main.txt`, `Keys.txt`, or any client-side script.
+Returns the legacy inventory from `Keys.txt`. It does not expose claim owner UserIds. New keys generated through the admin panel are stored in D1 and are deliberately not added to the public `Keys.txt` file.
 
-The API is stateless/serverless; Vercel runs the endpoint on demand rather than requiring a permanently running process.
+## Authenticated admin endpoint
 
-## Important security note
+`/api/admin/keys` requires this header:
 
-Because `Keys.txt` is in a public GitHub repository, the bound UserId will also be public. The GitHub token remains private in Vercel environment variables.
-
-The API is the authority for first-use binding. `Main.txt` runs entirely on the Roblox client/executor and sends the current `LocalPlayer.UserId` directly to this API. No Roblox ServerScript, RemoteFunction, or DataStore is required.
-
-## Main.txt configuration
-
-Set `KeyGate.ApiURL` in `Main.txt` to your deployed Vercel URL:
-
-```lua
-KeyGate.ApiURL = "https://YOUR-VERCEL-PROJECT.vercel.app/api/key"
+```text
+Authorization: Bearer YOUR_ADMIN_API_TOKEN
 ```
 
-The executor must support one of `request`, `http_request`, or `syn.request`.
+The token is configured as a **Cloudflare Worker secret** named `ADMIN_API_TOKEN`. Do not place it in `Main.txt`, a browser script, `Keys.txt`, or any public file.
+
+| Method | URL | Purpose |
+|---|---|---|
+| GET | `/api/admin/keys` | List legacy and D1 keys, claim status, bound UserId, claimed time and expiry |
+| POST | `/api/admin/keys` | Generate between 1 and 50 keys |
+| DELETE | `/api/admin/keys?key=KEY...` | Revoke a key |
+
+Example admin POST body:
+
+```json
+{
+  "count": 5,
+  "duration": "7d"
+}
+```
+
+Supported durations: `24h`, `7d`, `30d`, `90d`. Validity starts on the first successful claim. New key records live in the private D1 catalog; claim ownership/time is kept in the existing `key_claims` table. The Worker creates `key_catalog` automatically when first used.
+
+Revocation blocks future authorization checks. It does not forcibly unload an already-open client menu, and the API does not add hidden execution tracking. The admin panel reports key claims that reached the API, not script starts that never authenticate.
+
+## Deploy the Worker
+
+From the repository root:
+
+```powershell
+cd cloudflare-worker
+npx wrangler secret put ADMIN_API_TOKEN
+npx wrangler deploy
+```
+
+Generate a strong random token locally, then use the exact same token for the Cloudflare secret and `admin-panel/.env`.
+
+## Run the local admin panel
+
+Follow [admin-panel/README.md](admin-panel/README.md). The dashboard's Node.js server listens only on `127.0.0.1`, protects itself with a local password, and forwards authorized admin requests to the Worker. The admin token never enters the browser.
+
+## Legacy Vercel endpoint
+
+`api/key.js` is an older Vercel endpoint that binds keys by updating `Keys.txt`. The current `Main.txt` uses the Cloudflare Worker URL. Do not use the legacy Vercel endpoint for private D1-backed keys or admin functions.
