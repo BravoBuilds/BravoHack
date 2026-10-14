@@ -24,6 +24,7 @@ BravoHack is a modular Roblox Lua cheat menu designed for an executor/client-sid
 - [GitHub Lua Modules](#github-lua-modules)
 - [Built-in Inventory View](#built-in-inventory-view)
 - [Key Gate](#key-gate)
+- [Local Admin Panel](#local-admin-panel)
 - [Controls](#controls)
 - [Repository Structure](#repository-structure)
 - [How to Use](#how-to-use)
@@ -46,7 +47,8 @@ BravoHack is a modular Roblox Lua cheat menu designed for an executor/client-sid
 | World | Fullbright, fog control, gravity, camera FOV and time controls |
 | Utility | Player List, Chat Log, Tool Viewer, Spectate |
 | Config | Named JSON configs with persistent executor storage |
-| Key system | Server-authoritative keys bound to Roblox UserId |
+| Key system | Server-authoritative key claims bound to Roblox UserId, with expiry tracking |
+| Admin | Localhost key manager, private key creation, revocation and activation list |
 | Lua | GitHub module browser and runtime |
 | Modules | Built-in `InventoryView.lua` example |
 
@@ -338,9 +340,25 @@ The Get Key flow references the repository's:
 Keys.txt
 ```
 
-The client displays the immutable Roblox `Player.UserId` used for the binding. The server is authoritative: it reads the real `player.UserId`, so the client cannot choose a different binding ID. The remembered key is still stored locally through the executor's file system when enabled, but every automatic login is revalidated by the server. The menu footer shows the time remaining until the server-issued expiry; it turns orange near expiry and red in the final five minutes or after expiry.
+The client sends its Roblox UserId as part of a key claim. A successful claim is stored by the Cloudflare Worker in D1, and the menu footer shows the remaining time returned by the key API.
 
 ---
+
+# Local Admin Panel
+
+The `admin-panel/` folder contains a local web dashboard for administering access keys.
+
+- Generate 24-hour, 7-day, 30-day or 90-day keys.
+- Review key status, bound UserIds, claim times and expiry times.
+- Revoke access keys and search activation records.
+- New keys are stored in Cloudflare D1 instead of being written to the public `Keys.txt` file.
+- The admin token stays server-side in a local Node.js process; it is never shipped to the browser.
+
+Follow [admin-panel/README.md](admin-panel/README.md) to set the Cloudflare Worker secret, deploy the updated Worker and start the site at `http://127.0.0.1:4173`.
+
+**Scope limitation:** the Players page displays users who have claimed a key. It cannot know that a script was started without authentication, and it does not silently track IP addresses, devices or gameplay. Revocation blocks future authorizations; it does not forcibly close already-open client menus.
+
+--- 
 
 # Controls
 
