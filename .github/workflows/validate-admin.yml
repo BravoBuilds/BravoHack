@@ -1,0 +1,35 @@
+name: Validate BravoHack admin code
+
+on:
+  push:
+    paths:
+      - "cloudflare-worker/src/index.js"
+      - "admin-panel/server.js"
+      - "admin-panel/public/index.html"
+      - ".github/workflows/validate-admin.yml"
+  pull_request:
+    paths:
+      - "cloudflare-worker/src/index.js"
+      - "admin-panel/server.js"
+      - "admin-panel/public/index.html"
+      - ".github/workflows/validate-admin.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check local server syntax
+        run: node --check admin-panel/server.js
+      - name: Check Cloudflare Worker module syntax
+        run: node --input-type=module --check < cloudflare-worker/src/index.js
+      - name: Extract and check dashboard browser script
+        run: |
+          node -e "const fs=require('node:fs');const html=fs.readFileSync('admin-panel/public/index.html','utf8');const m=html.match(/<script>([\s\S]*?)<\/script>/);if(!m)throw new Error('Dashboard script not found');fs.writeFileSync('/tmp/admin-dashboard.js',m[1]);"
+          node --check /tmp/admin-dashboard.js
