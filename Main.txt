@@ -41,12 +41,8 @@ end
 
 local CONFIG = {
     Keybinds = {
-
+        -- RightShift is the only default binding; all feature/action binds start unbound.
         ToggleMenu = Enum.KeyCode.RightShift,
-        Freecam = Enum.KeyCode.F,
-        FreecamTeleport = Enum.KeyCode.RightControl,
-        Triggerbot = Enum.KeyCode.LeftAlt,
-        Aimbot = Enum.KeyCode.LeftAlt,
     },
     Colors = {
         Background  = Color3.fromRGB(15, 15, 17),
@@ -3961,7 +3957,7 @@ do
     CreateToggle(page, "Use Custom Activation Key", false, 5, function(v)
         State.Features.AimbotUseCustomKey = v
     end, "AimbotUseCustomKey")
-    CreateKeybind(page, "Aimbot Activation Key", CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt, 6, function(newKey)
+    CreateKeybind(page, "Aimbot Activation Key", CONFIG.Keybinds.Aimbot, 6, function(newKey)
         CONFIG.Keybinds.Aimbot = newKey
     end)
     CreateToggle(page, "Team Check", false, 7, function(v)
@@ -3999,7 +3995,7 @@ do
     CreateToggle(page, "Triggerbot Always On", true, 18, function(v)
         State.Features.TriggerbotAlwaysOn = v
     end, "TriggerbotAlwaysOn")
-    CreateKeybind(page, "Triggerbot Activation Key", CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt, 19, function(newKey)
+    CreateKeybind(page, "Triggerbot Activation Key", CONFIG.Keybinds.Triggerbot, 19, function(newKey)
         CONFIG.Keybinds.Triggerbot = newKey
     end)
     CreateToggle(page, "Only While Holding Mouse1", false, 20, function(v)
@@ -5421,10 +5417,10 @@ do
 end
 
 UserInputService.InputBegan:Connect(function(input)
-    if IsInputBinding(input, CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt) then
+    if IsInputBinding(input, CONFIG.Keybinds.Aimbot) then
         State.Input.AimbotKey = true
     end
-    if IsInputBinding(input, CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt) then
+    if IsInputBinding(input, CONFIG.Keybinds.Triggerbot) then
         State.Input.TriggerbotKey = true
     end
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
@@ -5454,7 +5450,7 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
 
     local activationHeld = State.Features.AimbotAlwaysOn
     if not activationHeld then
-        local keyHeld = State.Input.AimbotKey or IsInputBindingDown(CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt)
+        local keyHeld = State.Input.AimbotKey or IsInputBindingDown(CONFIG.Keybinds.Aimbot)
         local mouseHeld = State.Input.RMB or IsInputBindingDown(Enum.UserInputType.MouseButton2)
         if State.Features.AimbotUseCustomKey then
             activationHeld = keyHeld
@@ -5667,7 +5663,7 @@ RunService:BindToRenderStep("BravoHackTriggerbot", Enum.RenderPriority.Camera.Va
     local lmbHeld = State.Input.LMB
     local triggerKeyHeld = State.Input.TriggerbotKey
     pcall(function() lmbHeld = lmbHeld or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) end)
-    triggerKeyHeld = triggerKeyHeld or IsInputBindingDown(CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt)
+    triggerKeyHeld = triggerKeyHeld or IsInputBindingDown(CONFIG.Keybinds.Triggerbot)
     if State.Features.TriggerbotOnlyWhileMouse1 and not lmbHeld then return end
     if not State.Features.TriggerbotAlwaysOn and not triggerKeyHeld then return end
 
