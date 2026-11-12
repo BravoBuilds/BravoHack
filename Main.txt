@@ -394,8 +394,8 @@ UI.MainFrame.Name = "MainFrame"
 UI.MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 UI.MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 UI.MainFrame.Size = CONFIG.Sizes.Window
-UI.MainFrame.BackgroundColor3 = Color3.fromRGB(11, 13, 17)
-UI.MainFrame.BackgroundTransparency = 0.05
+UI.MainFrame.BackgroundColor3 = Color3.fromRGB(16, 19, 25)
+UI.MainFrame.BackgroundTransparency = 0.015
 UI.MainFrame.BorderSizePixel = 0
 UI.MainFrame.ClipsDescendants = true
 UI.MainFrame.Visible = false
@@ -411,10 +411,19 @@ UI.UIScaleInst.Parent = UI.MainFrame
 UI.TopBar = Instance.new("Frame")
 UI.TopBar.Name = "TopBar"
 UI.TopBar.Size = UDim2.new(1, 0, 0, CONFIG.Sizes.TopBar)
-UI.TopBar.BackgroundColor3 = Color3.fromRGB(14, 17, 22)
+UI.TopBar.BackgroundColor3 = Color3.fromRGB(20, 25, 34)
 UI.TopBar.BorderSizePixel = 0
 UI.TopBar.Parent = UI.MainFrame
-NewCorner(5, UI.TopBar)
+NewCorner(8, UI.TopBar)
+
+UI.TopBarAccent = Instance.new("Frame")
+UI.TopBarAccent.Name = "AccentLine"
+UI.TopBarAccent.Size = UDim2.new(1, -36, 0, 2)
+UI.TopBarAccent.Position = UDim2.new(0, 18, 1, -2)
+UI.TopBarAccent.BackgroundColor3 = CONFIG.Colors.Accent
+UI.TopBarAccent.BorderSizePixel = 0
+UI.TopBarAccent.Parent = UI.TopBar
+NewCorner(2, UI.TopBarAccent)
 
 UI.TopBarMask = Instance.new("Frame")
 UI.TopBarMask.BackgroundColor3 = CONFIG.Colors.Sidebar
@@ -426,12 +435,12 @@ UI.TopBarMask.Parent = UI.TopBar
 UI.Title = Instance.new("TextLabel")
 UI.Title.BackgroundTransparency = 1
 UI.Title.Position = UDim2.new(0, 30, 0, 0)
-UI.Title.Size = UDim2.new(1, -170, 1, 0)
+UI.Title.Size = UDim2.new(1, -250, 1, 0)
 UI.Title.Font = Enum.Font.GothamBold
-UI.Title.TextSize = 20
+UI.Title.TextSize = 21
 UI.Title.TextColor3 = CONFIG.Colors.Text
 UI.Title.TextXAlignment = Enum.TextXAlignment.Left
-UI.Title.Text = "BRAVOHACK"
+UI.Title.Text = "BRAVOHACK  /  CONTROL CENTER"
 UI.Title.Parent = UI.TopBar
 
 UI.VersionLabel = Instance.new("TextLabel")
@@ -554,7 +563,7 @@ UI.ProfileName = Instance.new("TextLabel")
 UI.ProfileName.Name = "ProfileName"
 UI.ProfileName.BackgroundTransparency = 1
 UI.ProfileName.Position = UDim2.fromOffset(40, 0)
-UI.ProfileName.Size = UDim2.new(1, -285, 1, 0)
+UI.ProfileName.Size = UDim2.new(1, -360, 1, 0)
 UI.ProfileName.Font = Enum.Font.GothamMedium
 UI.ProfileName.TextSize = 12
 UI.ProfileName.TextColor3 = CONFIG.Colors.Text
@@ -565,12 +574,12 @@ UI.ProfileName.Parent = UI.StatusBar
 
 UI.KeyExpiryLabel = Instance.new("TextLabel")
 UI.KeyExpiryLabel.Name = "KeyExpiryLabel"
-UI.KeyExpiryLabel.AnchorPoint = Vector2.new(1, 0)
--- Keep the single countdown visible independently of the menu's open/closed state.
-UI.KeyExpiryLabel.Position = UDim2.new(1, -16, 0, 16)
-UI.KeyExpiryLabel.Size = UDim2.fromOffset(190, 32)
+UI.KeyExpiryLabel.AnchorPoint = Vector2.new(1, 0.5)
+-- Key status stays inside the main menu status bar.
+UI.KeyExpiryLabel.Position = UDim2.new(1, -116, 0.5, 0)
+UI.KeyExpiryLabel.Size = UDim2.fromOffset(150, 24)
 UI.KeyExpiryLabel.BackgroundColor3 = CONFIG.Colors.Panel
-UI.KeyExpiryLabel.BackgroundTransparency = 0.08
+UI.KeyExpiryLabel.BackgroundTransparency = 0
 UI.KeyExpiryLabel.BorderSizePixel = 0
 UI.KeyExpiryLabel.Font = Enum.Font.GothamBold
 UI.KeyExpiryLabel.TextSize = 13
@@ -580,9 +589,37 @@ UI.KeyExpiryLabel.Text = "Key: --"
 UI.KeyExpiryLabel.TextTruncate = Enum.TextTruncate.AtEnd
 UI.KeyExpiryLabel.Visible = false
 UI.KeyExpiryLabel.ZIndex = 100
-UI.KeyExpiryLabel.Parent = UI.ScreenGui
+UI.KeyExpiryLabel.Parent = UI.StatusBar
 NewCorner(6, UI.KeyExpiryLabel)
 NewStroke(UI.KeyExpiryLabel, CONFIG.Colors.Stroke, 1, 0.15)
+
+UI.ClockLabel = Instance.new("TextLabel")
+UI.ClockLabel.Name = "ClockLabel"
+UI.ClockLabel.AnchorPoint = Vector2.new(1, 0.5)
+UI.ClockLabel.Position = UDim2.new(1, -14, 0.5, 0)
+UI.ClockLabel.Size = UDim2.fromOffset(88, 24)
+UI.ClockLabel.BackgroundColor3 = CONFIG.Colors.Panel
+UI.ClockLabel.BorderSizePixel = 0
+UI.ClockLabel.Font = Enum.Font.GothamSemibold
+UI.ClockLabel.TextSize = 12
+UI.ClockLabel.TextColor3 = CONFIG.Colors.Text
+UI.ClockLabel.TextXAlignment = Enum.TextXAlignment.Center
+UI.ClockLabel.Text = "--:--"
+UI.ClockLabel.Parent = UI.StatusBar
+NewCorner(6, UI.ClockLabel)
+NewStroke(UI.ClockLabel, CONFIG.Colors.Stroke, 1, 0.15)
+
+task.spawn(function()
+    while UI.ScreenGui and UI.ScreenGui.Parent and not _G.__BravoHackUnloaded do
+        local ok, clockText = pcall(function()
+            return DateTime.now():FormatLocalTime("HH:mm", "en-us")
+        end)
+        if UI.ClockLabel then
+            UI.ClockLabel.Text = ok and clockText or os.date("%H:%M")
+        end
+        task.wait(1)
+    end
+end)
 
 UI.StatusLabel = UI.ProfileName
 
