@@ -34,9 +34,14 @@ local function copyMap(source)
     return result
 end
 
+local function publicValue(value)
+    if value == false then return nil end
+    return value
+end
+
 local function callApply(entry, value)
     if entry.apply then
-        local ok, err = pcall(entry.apply, value == false and nil or value)
+        local ok, err = pcall(entry.apply, publicValue(value))
         if not ok then
             warn("[SettingsStore] UI update failed for " .. entry.name .. ": " .. tostring(err))
         end
@@ -132,14 +137,14 @@ function SettingsStore:Set(kind, name, value)
     assert(normalized ~= nil, "invalid value for setting: " .. name)
     self.values[kind][name] = normalized
     callApply(entry, normalized)
-    return normalized == false and nil or normalized
+    return publicValue(normalized)
 end
 
 function SettingsStore:Get(kind, name)
     local values = self.values[kind]
     assert(values and self.entries[kind][name], "unknown setting: " .. tostring(name))
     local value = values[name]
-    return value == false and nil or value
+    return publicValue(value)
 end
 
 function SettingsStore:Reset()
