@@ -2803,12 +2803,8 @@ function ApplyRemoveFog(enabled)
     Lighting.FogEnd = enabled and 100000 or Originals.FogEnd
 end
 
-UI.NotificationGui = Instance.new("ScreenGui")
-UI.NotificationGui.Name = "DeveloperNotifications"
-UI.NotificationGui.ResetOnSpawn = false
-UI.NotificationGui.IgnoreGuiInset = true
-UI.NotificationGui.DisplayOrder = 600
-UI.NotificationGui.Parent = PlayerGui
+-- Notifications share the main BravoHack ScreenGui; no extra ScreenGui is created.
+UI.NotificationGui = UI.ScreenGui
 
 UI.NotificationHolder = Instance.new("Frame")
 UI.NotificationHolder.BackgroundTransparency = 1
@@ -4444,12 +4440,8 @@ do
 end
 
 local function MakeWindow(titleText, size, position, guiName)
-    local gui = Instance.new("ScreenGui")
-    gui.Name = guiName
-    gui.ResetOnSpawn = false
-    gui.IgnoreGuiInset = true
-    gui.DisplayOrder = 300
-    gui.Parent = PlayerGui
+    -- Developer utility windows are Frames inside the single main ScreenGui.
+    local gui = UI.ScreenGui
 
     local frame = Instance.new("Frame")
     frame.Name = "Window"
