@@ -565,18 +565,24 @@ UI.ProfileName.Parent = UI.StatusBar
 
 UI.KeyExpiryLabel = Instance.new("TextLabel")
 UI.KeyExpiryLabel.Name = "KeyExpiryLabel"
-UI.KeyExpiryLabel.BackgroundTransparency = 1
 UI.KeyExpiryLabel.AnchorPoint = Vector2.new(1, 0)
--- Keep the key countdown fully inside the visible right side of the status bar.
-UI.KeyExpiryLabel.Position = UDim2.new(1, -12, 0, 0)
-UI.KeyExpiryLabel.Size = UDim2.fromOffset(190, CONFIG.Sizes.StatusBar)
+-- Keep the single countdown visible independently of the menu's open/closed state.
+UI.KeyExpiryLabel.Position = UDim2.new(1, -16, 0, 16)
+UI.KeyExpiryLabel.Size = UDim2.fromOffset(190, 32)
+UI.KeyExpiryLabel.BackgroundColor3 = CONFIG.Colors.Panel
+UI.KeyExpiryLabel.BackgroundTransparency = 0.08
+UI.KeyExpiryLabel.BorderSizePixel = 0
 UI.KeyExpiryLabel.Font = Enum.Font.GothamBold
 UI.KeyExpiryLabel.TextSize = 13
 UI.KeyExpiryLabel.TextColor3 = CONFIG.Colors.SubText
-UI.KeyExpiryLabel.TextXAlignment = Enum.TextXAlignment.Right
+UI.KeyExpiryLabel.TextXAlignment = Enum.TextXAlignment.Center
 UI.KeyExpiryLabel.Text = "Key: --"
 UI.KeyExpiryLabel.TextTruncate = Enum.TextTruncate.AtEnd
-UI.KeyExpiryLabel.Parent = UI.StatusBar
+UI.KeyExpiryLabel.Visible = false
+UI.KeyExpiryLabel.ZIndex = 100
+UI.KeyExpiryLabel.Parent = UI.ScreenGui
+NewCorner(6, UI.KeyExpiryLabel)
+NewStroke(UI.KeyExpiryLabel, CONFIG.Colors.Stroke, 1, 0.15)
 
 UI.StatusLabel = UI.ProfileName
 
@@ -806,11 +812,15 @@ local function StartKeyRemainingTimer(expiresAt)
         if UI.KeyExpiryLabel and UI.KeyExpiryLabel.Parent then
             UI.KeyExpiryLabel.Text = "Key: unknown"
             UI.KeyExpiryLabel.TextColor3 = CONFIG.Colors.SubText
+            UI.KeyExpiryLabel.Visible = true
         end
         return
     end
 
     KeyExpiresAt = timestamp
+    if UI.KeyExpiryLabel and UI.KeyExpiryLabel.Parent then
+        UI.KeyExpiryLabel.Visible = true
+    end
     task.spawn(function()
         while not _G.__BravoHackUnloaded and State.KeyAuthorized and KeyExpiresAt == timestamp do
             local remaining = timestamp - os.time()
