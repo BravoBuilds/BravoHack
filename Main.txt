@@ -1833,18 +1833,25 @@ local function CreateActionButton(parent, text, order, callback, keyName)
     return row
 end
 
-local function TriggerKeybind(keyCode)
-    if not keyCode then return false end
+local function TriggerKeybind(inputBinding)
+    if not inputBinding then return false end
+    local function matches(bound)
+        if not bound then return false end
+        if typeof(inputBinding) == "InputObject" then
+            return IsInputBinding(inputBinding, bound)
+        end
+        return bound == inputBinding
+    end
     for _, entry in pairs(FeatureKeybindRefs) do
         local bound = entry.Get and entry.Get()
-        if bound and bound == keyCode and entry.Toggle then
+        if matches(bound) and entry.Toggle then
             entry.Toggle()
             return true
         end
     end
     for _, entry in pairs(ActionKeybindRefs) do
         local bound = entry.Get and entry.Get()
-        if bound and bound == keyCode and entry.Trigger then
+        if matches(bound) and entry.Trigger then
             entry.Trigger()
             return true
         end
@@ -5323,7 +5330,17 @@ UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
         if not KeybindListening then ToggleMenu() end
         return
     end
-    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then
+        if KeybindListening then return end
+        if IsInputBinding(input, CONFIG.Keybinds.FreecamTeleport) then
+            TeleportToFreecamCamera()
+            return
+        end
+        if not UserInputService:GetFocusedTextBox() then
+            TriggerKeybind(input)
+        end
+        return
+    end
     if KeybindListening then return end
 
     if input.KeyCode == CONFIG.Keybinds.ToggleMenu then
@@ -5644,7 +5661,7 @@ RunService:BindToRenderStep("BravoHackTriggerbot", Enum.RenderPriority.Camera.Va
     local lmbHeld = State.Input.LMB
     local triggerKeyHeld = State.Input.TriggerbotKey
     pcall(function() lmbHeld = lmbHeld or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) end)
-    pcall(function() triggerKeyHeld = triggerKeyHeld or UserInputService:IsKeyDown(CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt) end)
+    triggerKeyHeld = triggerKeyHeld or IsInputBindingDown(CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt)
     if State.Features.TriggerbotOnlyWhileMouse1 and not lmbHeld then return end
     if not State.Features.TriggerbotAlwaysOn and not triggerKeyHeld then return end
 
