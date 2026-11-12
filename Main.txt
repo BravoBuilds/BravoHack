@@ -5518,14 +5518,14 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
     Camera = Workspace.CurrentCamera or Camera
     if not (State.Features.Aimbot or State.Features.AimAssist) or not Camera then return end
 
-    local activationHeld = State.Features.AimbotAlwaysOn
+    -- Activation is deterministic: Always On, the configured custom key,
+    -- or RMB by default. An unrelated/stale keybind cannot activate the aimbot.
+    local activationHeld = State.Features.AimbotAlwaysOn == true
     if not activationHeld then
-        local keyHeld = State.Input.AimbotKey or IsInputBindingDown(CONFIG.Keybinds.Aimbot)
-        local mouseHeld = State.Input.RMB or IsInputBindingDown(Enum.UserInputType.MouseButton2)
         if State.Features.AimbotUseCustomKey then
-            activationHeld = keyHeld
+            activationHeld = State.Input.AimbotKey == true or IsInputBindingDown(CONFIG.Keybinds.Aimbot)
         else
-            activationHeld = mouseHeld or keyHeld
+            activationHeld = State.Input.RMB == true or IsInputBindingDown(Enum.UserInputType.MouseButton2)
         end
     end
     if not activationHeld then return end
@@ -5534,9 +5534,10 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
         return
     end
 
-    local viewportCenter = Camera.ViewportSize / 2
+    local viewportSize = Camera.ViewportSize
+    if viewportSize.X <= 0 or viewportSize.Y <= 0 then return end
+    local viewportCenter = Vector2.new(viewportSize.X * 0.5, viewportSize.Y * 0.5)
     local nearestPart, nearestScreenDist = nil, math.huge
-    local nearestCharacter
 
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr ~= LocalPlayer then
@@ -5555,7 +5556,6 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
                         if screenDist <= State.Sliders.AimFOV and screenDist < nearestScreenDist then
                             nearestPart = targetPart
                             nearestScreenDist = screenDist
-                            nearestCharacter = char
                         end
                     end
                 end
@@ -5569,8 +5569,13 @@ RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Val
             local velocity = nearestPart.AssemblyLinearVelocity
             aimPosition = aimPosition + velocity * State.Sliders.AimbotPredictionAmount
         end
-        local targetCFrame = CFrame.new(Camera.CFrame.Position, aimPosition)
-        Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, State.Sliders.AimSmoothness)
+        local cameraPosition = Camera.CFrame.Position
+        local direction = aimPosition - cameraPosition
+        if direction.Magnitude > 0.001 then
+            local targetCFrame = CFrame.lookAt(cameraPosition, aimPosition, Camera.CFrame.UpVector)
+            local smoothness = math.clamp(tonumber(State.Sliders.AimSmoothness) or 0.25, 0.01, 1)
+            Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, smoothness)
+        end
     end
 end)
 
