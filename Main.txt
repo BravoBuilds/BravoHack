@@ -388,6 +388,7 @@ KeyGate.Status.ZIndex = 101
 KeyGate.Status.Parent = KeyGate.Frame
 
 local SubmitKey
+local RebindMenuToggle
 local KeyGateBusy = false
 local RunAutoLoadConfig
 local SavedConfigs, ConfigStore
@@ -4977,7 +4978,7 @@ local function ApplyConfig(cfg)
             CONFIG.Keybinds[k] = v
         end
     end
-    if BindMenuToggle then pcall(BindMenuToggle) end
+    if RebindMenuToggle then pcall(RebindMenuToggle) end
     for k, v in pairs(cfg.Sliders or {}) do
         State.Sliders[k] = v
     end
@@ -5047,13 +5048,7 @@ do
     CreateSectionLabel(page, "Interface", 1)
     CreateKeybind(page, "Menu Toggle Key", CONFIG.Keybinds.ToggleMenu, 2, function(newKey)
         CONFIG.Keybinds.ToggleMenu = newKey
-        pcall(function() ContextActionService:UnbindAction("BravoHack_MenuToggle") end)
-        ContextActionService:BindActionAtPriority("BravoHack_MenuToggle", function(_, inputState)
-            if inputState == Enum.UserInputState.Begin then
-                ToggleMenu()
-            end
-            return Enum.ContextActionResult.Sink
-        end, false, Enum.ContextActionPriority.High.Value, CONFIG.Keybinds.ToggleMenu)
+        if RebindMenuToggle then RebindMenuToggle() end
     end)
     CreateSlider(page, "UI Scale", 0.7, 1.3, State.Sliders.UIScale, 3, function(v)
         State.Sliders.UIScale = v
@@ -5291,7 +5286,7 @@ UI.CloseButton.MouseEnter:Connect(function() Tween(UI.CloseButton, TI_FAST, { Ba
 UI.CloseButton.MouseLeave:Connect(function() Tween(UI.CloseButton, TI_FAST, { BackgroundColor3 = Color3.fromRGB(40, 40, 48) }) end)
 UI.CloseButton.MouseButton1Click:Connect(CloseMenu)
 
-local function BindMenuToggle()
+RebindMenuToggle = function()
     pcall(function()
         ContextActionService:UnbindAction("BravoHack_MenuToggle")
     end)
@@ -5306,7 +5301,7 @@ local function BindMenuToggle()
     end
 end
 
-BindMenuToggle()
+RebindMenuToggle()
 State.KeyAuthorized = false
 State.MenuOpen = false
 UI.MainFrame.Visible = false
