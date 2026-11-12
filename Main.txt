@@ -45,30 +45,30 @@ local CONFIG = {
         ToggleMenu = Enum.KeyCode.RightShift,
     },
     Colors = {
-        Background  = Color3.fromRGB(15, 15, 17),
-        Sidebar     = Color3.fromRGB(18, 18, 20),
-        Panel       = Color3.fromRGB(20, 20, 22),
-        Accent      = Color3.fromRGB(0, 105, 255),
-        AccentHover = Color3.fromRGB(0, 135, 255),
-        Text        = Color3.fromRGB(230, 230, 235),
-        SubText     = Color3.fromRGB(150, 150, 160),
-        Green       = Color3.fromRGB(80, 220, 120),
-        Red         = Color3.fromRGB(230, 80, 90),
-        Stroke      = Color3.fromRGB(52, 52, 58),
-        SwitchOff   = Color3.fromRGB(34, 34, 38),
-        Skeleton    = Color3.fromRGB(80, 190, 255),
-        SkeletonVisible = Color3.fromRGB(80, 230, 125),
-        SkeletonHidden = Color3.fromRGB(235, 85, 95),
-        HeadTarget = Color3.fromRGB(255, 175, 65),
-        ESPFill     = Color3.fromRGB(90, 110, 255),
-        ESPOutline  = Color3.fromRGB(255, 255, 255),
-        Tracer      = Color3.fromRGB(90, 110, 255),
-        BoxESP      = Color3.fromRGB(90, 110, 255),
-        HealthGood  = Color3.fromRGB(90, 230, 120),
-        HealthLow   = Color3.fromRGB(235, 80, 90),
-        AimTarget   = Color3.fromRGB(255, 80, 95),
-        ProtectedESP = Color3.fromRGB(255, 190, 70),
-        ProtectedOutline = Color3.fromRGB(255, 235, 160),
+        Background  = Color3.fromRGB(13, 19, 23),
+        Sidebar     = Color3.fromRGB(18, 29, 34),
+        Panel       = Color3.fromRGB(23, 36, 41),
+        Accent      = Color3.fromRGB(65, 190, 170),
+        AccentHover = Color3.fromRGB(88, 215, 190),
+        Text        = Color3.fromRGB(232, 241, 239),
+        SubText     = Color3.fromRGB(151, 174, 173),
+        Green       = Color3.fromRGB(105, 210, 160),
+        Red         = Color3.fromRGB(232, 112, 112),
+        Stroke      = Color3.fromRGB(48, 72, 76),
+        SwitchOff   = Color3.fromRGB(35, 52, 57),
+        Skeleton    = Color3.fromRGB(90, 205, 190),
+        SkeletonVisible = Color3.fromRGB(110, 220, 165),
+        SkeletonHidden = Color3.fromRGB(220, 125, 125),
+        HeadTarget = Color3.fromRGB(245, 190, 105),
+        ESPFill     = Color3.fromRGB(75, 175, 160),
+        ESPOutline  = Color3.fromRGB(225, 245, 240),
+        Tracer      = Color3.fromRGB(90, 195, 180),
+        BoxESP      = Color3.fromRGB(90, 195, 180),
+        HealthGood  = Color3.fromRGB(110, 210, 155),
+        HealthLow   = Color3.fromRGB(225, 125, 115),
+        AimTarget   = Color3.fromRGB(240, 145, 125),
+        ProtectedESP = Color3.fromRGB(225, 185, 110),
+        ProtectedOutline = Color3.fromRGB(250, 225, 175),
     },
     Sizes = {
         Window  = UDim2.fromOffset(960, 580),
@@ -440,7 +440,7 @@ UI.Title.Font = Enum.Font.GothamBold
 UI.Title.TextSize = 21
 UI.Title.TextColor3 = CONFIG.Colors.Text
 UI.Title.TextXAlignment = Enum.TextXAlignment.Left
-UI.Title.Text = "BRAVOHACK  /  CONTROL CENTER"
+UI.Title.Text = "BRAVOHACK"
 UI.Title.Parent = UI.TopBar
 
 UI.VersionLabel = Instance.new("TextLabel")
@@ -472,7 +472,7 @@ NewCorner(3, UI.CloseButton)
 
 UI.TopTabBar = Instance.new("Frame")
 UI.TopTabBar.Name = "TopTabBar"
-UI.TopTabBar.Size = UDim2.new(1, -60, 0, 40)
+UI.TopTabBar.Size = UDim2.new(1, -60, 0, 44)
 UI.TopTabBar.Position = UDim2.fromOffset(30, CONFIG.Sizes.TopBar)
 UI.TopTabBar.BackgroundColor3 = Color3.fromRGB(17, 18, 22)
 UI.TopTabBar.BorderSizePixel = 0
@@ -482,7 +482,7 @@ UI.TopTabBar.Parent = UI.MainFrame
 UI.TopTabLayout = Instance.new("UIListLayout")
 UI.TopTabLayout.FillDirection = Enum.FillDirection.Horizontal
 UI.TopTabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UI.TopTabLayout.Padding = UDim.new(0, 10)
+UI.TopTabLayout.Padding = UDim.new(0, 14)
 UI.TopTabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
 UI.TopTabLayout.Parent = UI.TopTabBar
 
@@ -503,8 +503,8 @@ NewCorner(0, UI.Indicator)
 
 UI.ContentArea = Instance.new("Frame")
 UI.ContentArea.Name = "ContentArea"
-UI.ContentArea.Size = UDim2.new(1, 0, 1, -CONFIG.Sizes.TopBar - 40 - CONFIG.Sizes.StatusBar)
-UI.ContentArea.Position = UDim2.new(0, 0, 0, CONFIG.Sizes.TopBar + 40)
+UI.ContentArea.Size = UDim2.new(1, 0, 1, -CONFIG.Sizes.TopBar - 44 - CONFIG.Sizes.StatusBar)
+UI.ContentArea.Position = UDim2.new(0, 0, 0, CONFIG.Sizes.TopBar + 44)
 UI.ContentArea.BackgroundTransparency = 1
 UI.ContentArea.Parent = UI.MainFrame
 
@@ -563,7 +563,7 @@ UI.ProfileName = Instance.new("TextLabel")
 UI.ProfileName.Name = "ProfileName"
 UI.ProfileName.BackgroundTransparency = 1
 UI.ProfileName.Position = UDim2.fromOffset(40, 0)
-UI.ProfileName.Size = UDim2.new(1, -360, 1, 0)
+UI.ProfileName.Size = UDim2.new(1, -450, 1, 0)
 UI.ProfileName.Font = Enum.Font.GothamMedium
 UI.ProfileName.TextSize = 12
 UI.ProfileName.TextColor3 = CONFIG.Colors.Text
@@ -1082,8 +1082,14 @@ end)
 UI.FPSLabel = Instance.new("TextLabel")
 UI.FPSLabel.BackgroundTransparency = 1
 UI.FPSLabel.AnchorPoint = Vector2.new(1, 0)
-UI.FPSLabel.Position = UDim2.new(1, -18, 0, 0)
-UI.FPSLabel.Size = UDim2.fromOffset(80, CONFIG.Sizes.StatusBar)
+UI.FPSLabel.AnchorPoint = Vector2.new(1, 0.5)
+UI.FPSLabel.Position = UDim2.new(1, -274, 0.5, 0)
+UI.FPSLabel.Size = UDim2.fromOffset(76, 24)
+UI.FPSLabel.BackgroundColor3 = CONFIG.Colors.Panel
+UI.FPSLabel.BackgroundTransparency = 0
+UI.FPSLabel.BorderSizePixel = 0
+NewCorner(6, UI.FPSLabel)
+NewStroke(UI.FPSLabel, CONFIG.Colors.Stroke, 1, 0.15)
 UI.FPSLabel.Font = Enum.Font.GothamMedium
 UI.FPSLabel.TextSize = 12
 UI.FPSLabel.TextColor3 = CONFIG.Colors.SubText
@@ -1126,7 +1132,7 @@ for i, name in ipairs(categories) do
     pagePadding.Parent = page
 
     local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 10)
+    layout.Padding = UDim.new(0, 14)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.Parent = page
 
@@ -3814,7 +3820,7 @@ local function CreateToolViewerForPlayer(plr)
 
     RemoveToolViewerForPlayer(plr)
     local gui = Instance.new("BillboardGui")
-    gui.Name = "DeveloperToolViewer"
+    gui.Name = "DeveloperBackpackView"
     gui.AlwaysOnTop = true
     gui.MaxDistance = State.Sliders.ESPDistance
     gui.Size = UDim2.fromOffset(220, 34)
@@ -4446,7 +4452,24 @@ end
 LoadDex = function()
     local dexUrl = "https://raw.githubusercontent.com/Babyhamsta/RBLX_Scripts/main/Universal/BypassedDarkDexV3.lua"
     local ok, err = pcall(function()
-        loadstring(game:HttpGet(dexUrl))()
+        if type(loadstring) ~= "function" then
+            error("This executor does not support loadstring.")
+        end
+        local source
+        local httpOk, httpResult = pcall(function() return game:HttpGet(dexUrl) end)
+        if httpOk and type(httpResult) == "string" and #httpResult > 0 then
+            source = httpResult
+        elseif type(request) == "function" then
+            local response = request({Url = dexUrl, Method = "GET"})
+            if response and response.Success and type(response.Body) == "string" then source = response.Body end
+        elseif type(http_request) == "function" then
+            local response = http_request({Url = dexUrl, Method = "GET"})
+            if response and response.Success and type(response.Body) == "string" then source = response.Body end
+        end
+        if not source then error("Could not download Dex Explorer. Check executor HTTP support.") end
+        local chunk, compileError = loadstring(source)
+        if type(chunk) ~= "function" then error(compileError or "Dex Explorer could not be compiled.") end
+        chunk()
     end)
     if Notify then
         Notify("Dex Explorer", ok and "Dex Explorer loaded." or ("Failed to load Dex Explorer: " .. tostring(err)), true)
@@ -4469,7 +4492,7 @@ do
         if MiscUI.PlayerListFrame then MiscUI.PlayerListFrame.Visible = v end
         if v then RefreshPlayerListUI() end
     end, "PlayerList")
-    CreateToggle(page, "Tool Viewer (through walls)", false, 5, function(v)
+    CreateToggle(page, "Backpack View (through walls)", false, 5, function(v)
         State.Features.ToolViewer = v
         RefreshToolViewer()
     end, "ToolViewer")
@@ -5106,6 +5129,12 @@ do
     CreateToggle(page, "Notifications", State.Features.Notifications, 4, function(v)
         State.Features.Notifications = v
     end, "Notifications")
+    CreateToggle(page, "Show FPS counter", true, 5, function(v)
+        UI.FPSLabel.Visible = v
+    end)
+    CreateToggle(page, "Show clock", true, 6, function(v)
+        UI.ClockLabel.Visible = v
+    end)
     CreateToggle(page, "Hide Freecam Bar", State.Features.HideFreecamBar, 5, function(v)
         State.Features.HideFreecamBar = v
         if v then FreecamStatusLabel.Visible = false end
