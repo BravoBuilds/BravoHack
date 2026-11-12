@@ -572,7 +572,7 @@ UI.KeyExpiryLabel.Name = "KeyExpiryLabel"
 UI.KeyExpiryLabel.BackgroundTransparency = 1
 UI.KeyExpiryLabel.AnchorPoint = Vector2.new(1, 0)
 UI.KeyExpiryLabel.Position = UDim2.new(1, -105, 0, 0)
-UI.KeyExpiryLabel.Size = UDim2.fromOffset(135, CONFIG.Sizes.StatusBar)
+UI.KeyExpiryLabel.Size = UDim2.fromOffset(150, CONFIG.Sizes.StatusBar)
 UI.KeyExpiryLabel.Font = Enum.Font.GothamMedium
 UI.KeyExpiryLabel.TextSize = 11
 UI.KeyExpiryLabel.TextColor3 = CONFIG.Colors.SubText
@@ -787,12 +787,17 @@ local function FormatTimeRemaining(expiresAt)
     local timestamp = tonumber(expiresAt)
     if not timestamp then return "Unknown" end
 
+    -- Always calculate from the absolute expiry timestamp so the display
+    -- remains correct after delays, lag, or a resumed client.
     local remaining = math.max(0, math.floor(timestamp - os.time()))
-    local hours = math.floor(remaining / 3600)
+    local days = math.floor(remaining / 86400)
+    local hours = math.floor((remaining % 86400) / 3600)
     local minutes = math.floor((remaining % 3600) / 60)
     local seconds = remaining % 60
 
-    if hours > 0 then
+    if days > 0 then
+        return string.format("%dd %02dh", days, hours)
+    elseif hours > 0 then
         return string.format("%dh %02dm", hours, minutes)
     end
     return string.format("%dm %02ds", minutes, seconds)
