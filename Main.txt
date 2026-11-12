@@ -571,10 +571,11 @@ UI.KeyExpiryLabel = Instance.new("TextLabel")
 UI.KeyExpiryLabel.Name = "KeyExpiryLabel"
 UI.KeyExpiryLabel.BackgroundTransparency = 1
 UI.KeyExpiryLabel.AnchorPoint = Vector2.new(1, 0)
-UI.KeyExpiryLabel.Position = UDim2.new(1, -105, 0, 0)
-UI.KeyExpiryLabel.Size = UDim2.fromOffset(150, CONFIG.Sizes.StatusBar)
-UI.KeyExpiryLabel.Font = Enum.Font.GothamMedium
-UI.KeyExpiryLabel.TextSize = 11
+-- Keep the key countdown fully inside the visible right side of the status bar.
+UI.KeyExpiryLabel.Position = UDim2.new(1, -12, 0, 0)
+UI.KeyExpiryLabel.Size = UDim2.fromOffset(190, CONFIG.Sizes.StatusBar)
+UI.KeyExpiryLabel.Font = Enum.Font.GothamBold
+UI.KeyExpiryLabel.TextSize = 13
 UI.KeyExpiryLabel.TextColor3 = CONFIG.Colors.SubText
 UI.KeyExpiryLabel.TextXAlignment = Enum.TextXAlignment.Right
 UI.KeyExpiryLabel.Text = "Key: --"
