@@ -1622,6 +1622,35 @@ local function CreateSlider(parent, text, min, max, default, order, callback, de
     return ref
 end
 
+local function GetInputBindingName(binding)
+    if typeof(binding) == "EnumItem" then return binding.Name end
+    return "Not set"
+end
+
+local function IsInputBinding(input, binding)
+    if typeof(binding) ~= "EnumItem" then return false end
+    if binding.EnumType == Enum.KeyCode then
+        return input.UserInputType == Enum.UserInputType.Keyboard and input.KeyCode == binding
+    end
+    if binding.EnumType == Enum.UserInputType then
+        return input.UserInputType == binding
+    end
+    return false
+end
+
+local function IsInputBindingDown(binding)
+    if typeof(binding) ~= "EnumItem" then return false end
+    local ok, down = pcall(function()
+        if binding.EnumType == Enum.KeyCode then
+            return UserInputService:IsKeyDown(binding)
+        elseif binding.EnumType == Enum.UserInputType then
+            return UserInputService:IsMouseButtonPressed(binding)
+        end
+        return false
+    end)
+    return ok and down == true
+end
+
 local function CreateKeybind(parent, text, defaultKey, order, callback)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 40)
@@ -1651,25 +1680,52 @@ local function CreateKeybind(parent, text, defaultKey, order, callback)
     keyBtn.TextSize = 12
     keyBtn.TextColor3 = CONFIG.Colors.Text
     keyBtn.AutoButtonColor = false
-    keyBtn.Text = defaultKey.Name
+    keyBtn.Text = GetInputBindingName(defaultKey)
     keyBtn.Parent = row
     NewCorner(6, keyBtn)
 
     local listening = false
+    local captureConnection
+    local function stopListening()
+        listening = false
+        KeybindListening = false
+        if captureConnection then
+            captureConnection:Disconnect()
+            captureConnection = nil
+        end
+        Tween(keyBtn, TI_FAST, { BackgroundColor3 = Color3.fromRGB(50, 50, 58) })
+    end
+
     keyBtn.MouseButton1Click:Connect(function()
-        if listening then return end
+        if listening or KeybindListening then return end
         listening = true
-        keyBtn.Text = "..."
+        KeybindListening = true
+        keyBtn.Text = "press key/mouse"
         Tween(keyBtn, TI_FAST, { BackgroundColor3 = CONFIG.Colors.Accent })
-        local conn
-        conn = UserInputService.InputBegan:Connect(function(input)
+        captureConnection = UserInputService.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
-                keyBtn.Text = input.KeyCode.Name
-                listening = false
-                Tween(keyBtn, TI_FAST, { BackgroundColor3 = Color3.fromRGB(50, 50, 58) })
-                if callback then callback(input.KeyCode) end
-                conn:Disconnect()
+                if input.KeyCode == Enum.KeyCode.Escape then
+                    keyBtn.Text = GetInputBindingName(defaultKey)
+                    stopListening()
+                    return
+                elseif input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Delete then
+                    defaultKey = nil
+                    keyBtn.Text = "Not set"
+                    if callback then callback(nil) end
+                    stopListening()
+                    return
+                end
+                defaultKey = input.KeyCode
+            elseif input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.MouseButton2
+                or input.UserInputType == Enum.UserInputType.MouseButton3 then
+                defaultKey = input.UserInputType
+            else
+                return
             end
+            keyBtn.Text = GetInputBindingName(defaultKey)
+            if callback then callback(defaultKey) end
+            stopListening()
         end)
     end)
 
@@ -1721,17 +1777,26 @@ local function CreateActionButton(parent, text, order, callback, keyName)
             Tween(keyBtn, TI_FAST, { BackgroundColor3 = CONFIG.Colors.AccentHover })
             local conn
             conn = UserInputService.InputBegan:Connect(function(input)
-                if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-                if input.KeyCode == Enum.KeyCode.Escape then
-                    keyBtn.Text = currentKey and currentKey.Name or "Not set"
-                elseif input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Delete then
-                    currentKey = nil
-                    CONFIG.Keybinds[keyName] = nil
-                    keyBtn.Text = "Not set"
+                if input.UserInputType == Enum.UserInputType.Keyboard then
+                    if input.KeyCode == Enum.KeyCode.Escape then
+                        keyBtn.Text = GetInputBindingName(currentKey)
+                    elseif input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Delete then
+                        currentKey = nil
+                        CONFIG.Keybinds[keyName] = nil
+                        keyBtn.Text = "Not set"
+                    else
+                        currentKey = input.KeyCode
+                    end
+                elseif input.UserInputType == Enum.UserInputType.MouseButton1
+                    or input.UserInputType == Enum.UserInputType.MouseButton2
+                    or input.UserInputType == Enum.UserInputType.MouseButton3 then
+                    currentKey = input.UserInputType
                 else
-                    currentKey = input.KeyCode
+                    return
+                end
+                if input.KeyCode ~= Enum.KeyCode.Escape then
                     CONFIG.Keybinds[keyName] = currentKey
-                    keyBtn.Text = currentKey.Name
+                    keyBtn.Text = GetInputBindingName(currentKey)
                 end
                 KeybindListening = false
                 Tween(keyBtn, TI_FAST, { BackgroundColor3 = Color3.fromRGB(50, 50, 58) })
@@ -3872,8 +3937,9 @@ do
     local page = Pages.Combat
     CreateSectionLabel(page, "Aimbot", 1)
     CreateAimTargetDropdown(page)
-    CreateToggle(page, "Enable Aimbot", false, 3, function(v)
+    CreateToggle(page, "Enable Aim Assist", State.Features.Aimbot or State.Features.AimAssist, 3, function(v)
         State.Features.Aimbot = v
+        State.Features.AimAssist = v
     end, "Aimbot")
     CreateToggle(page, "Always On", false, 4, function(v)
         State.Features.AimbotAlwaysOn = v
@@ -4753,8 +4819,12 @@ ConfigStore.Prepare = function(cfg)
         ProtectedPlayers = {},
     }
 
-    for k, v in pairs(cfg.Keybinds or {}) do
-        if typeof(v) == "EnumItem" then
+    local knownKeybinds = {"ToggleMenu", "Freecam", "FreecamTeleport", "Triggerbot", "Aimbot"}
+    for _, k in ipairs(knownKeybinds) do
+        local v = cfg.Keybinds and cfg.Keybinds[k]
+        if v == nil or v == false then
+            out.Keybinds[k] = "Unbound"
+        elseif typeof(v) == "EnumItem" then
             out.Keybinds[k] = v.Name
         elseif type(v) == "string" then
             out.Keybinds[k] = v
@@ -4794,9 +4864,13 @@ ConfigStore.Restore = function(data)
         ProtectedPlayers = {},
     }
 
-    for k, v in pairs(data.Keybinds or {}) do
-        if type(v) == "string" and Enum.KeyCode[v] then
-            cfg.Keybinds[k] = Enum.KeyCode[v]
+    local knownKeybinds = {"ToggleMenu", "Freecam", "FreecamTeleport", "Triggerbot", "Aimbot"}
+    for _, k in ipairs(knownKeybinds) do
+        local v = data.Keybinds and data.Keybinds[k]
+        if v == "Unbound" then
+            cfg.Keybinds[k] = false
+        elseif type(v) == "string" then
+            cfg.Keybinds[k] = Enum.KeyCode[v] or Enum.UserInputType[v]
         end
     end
 
@@ -4882,7 +4956,9 @@ local function CaptureConfig()
     for userId, enabled in pairs(State.ProtectedPlayers) do
         cfg.ProtectedPlayers[userId] = enabled
     end
-    for k, v in pairs(CONFIG.Keybinds) do cfg.Keybinds[k] = v end
+    for _, k in ipairs({"ToggleMenu", "Freecam", "FreecamTeleport", "Triggerbot", "Aimbot"}) do
+        cfg.Keybinds[k] = CONFIG.Keybinds[k] or false
+    end
     for k, v in pairs(State.Sliders) do cfg.Sliders[k] = v end
     for k, v in pairs(State.Features) do
         if k ~= "AutoRememberKey" and k ~= "AutoLoadConfig" then
@@ -4895,8 +4971,13 @@ end
 local function ApplyConfig(cfg)
     if not cfg then return end
     for k, v in pairs(cfg.Keybinds or {}) do
-        CONFIG.Keybinds[k] = v
+        if v == false or v == "Unbound" then
+            CONFIG.Keybinds[k] = nil
+        else
+            CONFIG.Keybinds[k] = v
+        end
     end
+    if BindMenuToggle then pcall(BindMenuToggle) end
     for k, v in pairs(cfg.Sliders or {}) do
         State.Sliders[k] = v
     end
@@ -5214,12 +5295,15 @@ local function BindMenuToggle()
     pcall(function()
         ContextActionService:UnbindAction("BravoHack_MenuToggle")
     end)
-    ContextActionService:BindActionAtPriority("BravoHack_MenuToggle", function(_, inputState)
-        if inputState == Enum.UserInputState.Begin then
-            ToggleMenu()
-        end
-        return Enum.ContextActionResult.Sink
-    end, false, Enum.ContextActionPriority.High.Value, CONFIG.Keybinds.ToggleMenu)
+    local menuBinding = CONFIG.Keybinds.ToggleMenu
+    if typeof(menuBinding) == "EnumItem" and menuBinding.EnumType == Enum.KeyCode then
+        ContextActionService:BindActionAtPriority("BravoHack_MenuToggle", function(_, inputState)
+            if inputState == Enum.UserInputState.Begin then
+                ToggleMenu()
+            end
+            return Enum.ContextActionResult.Sink
+        end, false, Enum.ContextActionPriority.High.Value, menuBinding)
+    end
 end
 
 BindMenuToggle()
@@ -5239,6 +5323,11 @@ task.defer(function()
 end)
 
 UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    local menuBinding = CONFIG.Keybinds.ToggleMenu
+    if menuBinding and menuBinding.EnumType == Enum.UserInputType and IsInputBinding(input, menuBinding) then
+        if not KeybindListening then ToggleMenu() end
+        return
+    end
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
     if KeybindListening then return end
 
@@ -5314,14 +5403,13 @@ do
 end
 
 UserInputService.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == (CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt) then
-            State.Input.AimbotKey = true
-        end
-        if input.KeyCode == (CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt) then
-            State.Input.TriggerbotKey = true
-        end
-    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+    if IsInputBinding(input, CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt) then
+        State.Input.AimbotKey = true
+    end
+    if IsInputBinding(input, CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt) then
+        State.Input.TriggerbotKey = true
+    end
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
         State.Input.RMB = true
     elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
         State.Input.LMB = true
@@ -5329,14 +5417,13 @@ UserInputService.InputBegan:Connect(function(input)
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Keyboard then
-        if input.KeyCode == (CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt) then
-            State.Input.AimbotKey = false
-        end
-        if input.KeyCode == (CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt) then
-            State.Input.TriggerbotKey = false
-        end
-    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
+    if IsInputBinding(input, CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt) then
+        State.Input.AimbotKey = false
+    end
+    if IsInputBinding(input, CONFIG.Keybinds.Triggerbot or Enum.KeyCode.LeftAlt) then
+        State.Input.TriggerbotKey = false
+    end
+    if input.UserInputType == Enum.UserInputType.MouseButton2 then
         State.Input.RMB = false
     elseif input.UserInputType == Enum.UserInputType.MouseButton1 then
         State.Input.LMB = false
@@ -5345,18 +5432,12 @@ end)
 
 RunService:BindToRenderStep("CheatMenuAimAssist", Enum.RenderPriority.Camera.Value + 1, function()
     Camera = Workspace.CurrentCamera or Camera
-    if not State.Features.Aimbot or not Camera then return end
+    if not (State.Features.Aimbot or State.Features.AimAssist) or not Camera then return end
 
     local activationHeld = State.Features.AimbotAlwaysOn
     if not activationHeld then
-        local keyHeld = State.Input.AimbotKey
-        local mouseHeld = State.Input.RMB
-        pcall(function()
-            keyHeld = keyHeld or UserInputService:IsKeyDown(CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt)
-        end)
-        pcall(function()
-            mouseHeld = mouseHeld or UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
-        end)
+        local keyHeld = State.Input.AimbotKey or IsInputBindingDown(CONFIG.Keybinds.Aimbot or Enum.KeyCode.LeftAlt)
+        local mouseHeld = State.Input.RMB or IsInputBindingDown(Enum.UserInputType.MouseButton2)
         if State.Features.AimbotUseCustomKey then
             activationHeld = keyHeld
         else
